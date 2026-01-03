@@ -62,14 +62,38 @@ export interface LocationData {
 }
 
 /**
- * Task factory for creating new tasks
- * Only handles Sprint 1 minimal fields
+ * TaskFactory
+ * 
+ * This is a utility class to create and manipulate Task objects.
+ * For Sprint 1, it handles only the minimal required fields for tasks:
+ * - id: unique identifier
+ * - title: task name
+ * - completed: boolean to mark task completion
+ * - createdAt: timestamp of task creation
+ * 
+ * Future features like priority, subtasks, recurring tasks, Google Calendar/ Fit
+ * integration, location, etc., can be added later without breaking this core logic.
  */
-export class TaskFactory {
+export class TaskFactory 
+{
+  /**
+   * generateId
+   * Generates a unique ID string for each task.
+   * Format: "task_" + current timestamp + random string
+   * Ensures tasks have unique identifiers even if created quickly in succession.
+   */
   static generateId(): string {
     return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  /**
+   * create
+   * Factory method to create a new Task object.
+   * Only requires a title for Sprint 1.
+   * Sets default values for:
+   * - completed: false
+   * - createdAt: current date and time
+   */
   static create(title: string): Task {
     return {
       id: this.generateId(),
@@ -79,11 +103,30 @@ export class TaskFactory {
     };
   }
 
-  static complete(task: Task): Task {
+  /**
+   * complete
+   * Marks a given task as completed.
+   * Returns a **new object** (immutable update) with completed = true.
+   * Future logic can expand here to:
+   * - Update streaks
+   * - Update completion history
+   * - Trigger analytics events
+   */
+  static complete(task: Task): Task 
+  {
     return { ...task, completed: true };
   }
 
-  static uncomplete(task: Task): Task {
+  /**
+   * uncomplete
+   * Marks a given task as not completed (undo).
+   * Returns a **new object** (immutable update) with completed = false.
+   * Future logic can expand here to:
+   * - Adjust streaks
+   * - Remove last completion from history
+   */
+  static uncomplete(task: Task): Task 
+  {
     return { ...task, completed: false };
   }
 }
