@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -25,13 +26,19 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
 # macOS
 .DS_Store
 *.pem
 
+# Windows
+Thumbs.db
+
 # local env files
+.env
 .env*.local
+.env.production
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +46,30 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Testing
+coverage/
+.nyc_output/
+
+# SQLite databases (optional - remove if you want to track test data)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Temporary files
+*.tmp
+tmp/
+temp/
