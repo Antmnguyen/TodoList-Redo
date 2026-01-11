@@ -31,6 +31,7 @@ export interface Task {
 /**
  * SubTask interface
  * Optional for now, feature can implement later
+ * each task has an optional pointer to another task this is the subtask
  */
 export interface SubTask {
   id: string;
@@ -100,8 +101,9 @@ export class TaskFactory
       title,
       completed: false,
       createdAt: new Date(),
+      //TODO  at later sprints call functions from features here to set values for other task attributes
     };
-  }
+  } //returns a task 
 
   /**
    * complete

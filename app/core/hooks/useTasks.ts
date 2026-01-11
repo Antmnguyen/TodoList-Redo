@@ -1,91 +1,82 @@
-import { useState } from 'react';
+// app/core/hooks/useTasks.ts
+import { useState, useEffect } from 'react';
 import { Task } from '../types/tasks';
+import { getAllTasks, saveTask, deleteTask } from '../services/storage/taskStorage';
 
 /**
  * useTasks Hook
- * 
- * Custom React hook to manage the state of tasks in the app.
- * Handles basic CRUD operations for Sprint 1:
- * - Add task
- * - Toggle completion
- * - Delete task
- * 
- * Designed to be **minimal and decoupled**, so future features can be added without breaking.
- * Examples of future expansions:
- * - Integrate with SQLite / AsyncStorage
- * - Handle recurring tasks
- * - Update streaks or analytics
- * - Link tasks to calendar or location
+ * ----------------
+ * Core task management for Sprint 2.
+ * Responsibilities:
+ *  - Manage task state in memory
+ *  - Persist tasks to SQLite via taskStorage.ts
+ *  - Keep UI decoupled from database
+ *
+ * Future-proofing:
+ *  - Can add analytics, streaks, geofencing, etc.
+ *  - All changes happen in storage layer without touching this hook
  */
-export function useTasks(initialTasks: Task[] = []) {
-  // State to hold all tasks
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+export function useTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  /**
-   * addTask
-   * Adds a new task to the state.
-   * Accepts a Task object (with required fields: id, title, completed, createdAt)
-   * Future logic could:
-   * - Auto-generate IDs here instead of using TaskFactory
-   * - Save to database / AsyncStorage
-   */
-  function addTask(task: Task) {
-    setTasks(prev => [...prev, task]);
+  // Load tasks from DB on mount
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  /** Load all tasks from persistent storage */
+  async function loadTasks() {
+    setLoading(true);
+    const loadedTasks = await getAllTasks();
+    setTasks(loadedTasks);
+    setLoading(false);
   }
 
-  /**
-   * toggleTaskCompletion
-   * Marks a task as completed/uncompleted.
-   * Accepts a task ID, finds the task, and toggles its `completed` property.
-   * Returns a **new array** to ensure immutable state updates.
-   * Future logic could:
-   * - Update streaks, completion history
-   * - Trigger analytics or notifications
-   */
-  function toggleTaskCompletion(taskId: string) {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
+  /** Add a new task */
+  async function addTask(title: string) {
+    const newTask: Task = {
+      id: Date.now().toString(), // simple unique ID for Sprint 2
+      title,
+      completed: false,
+      createdAt: new Date(),
+    };
+
+    // Optimistic UI update
+    setTasks(prev => [newTask, ...prev]);
+
+    // Persist to database
+    await saveTask(newTask);
   }
 
-  /**
-   * deleteTask
-   * Removes a task from the list.
-   * Accepts a task ID.
-   * Returns a **new array** to maintain immutability.
-   * Future logic could:
-   * - Archive deleted tasks for undo
-   * - Remove related subtasks or analytics
-   */
-  function deleteTask(taskId: string) {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  /** Toggle task completion */
+  async function toggleTask(taskId: string) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedTask: Task = { ...task, completed: !task.completed };
+
+    // Optimistic UI update
+    setTasks(prev => prev.map(t => (t.id === taskId ? updatedTask : t)));
+
+    // Persist to database
+    await saveTask(updatedTask);
   }
 
-  /**
-   * updateTask
-   * Updates a task with new values.
-   * Accepts a task ID and partial updates.
-   * Returns a **new array** with the updated task.
-   * Future logic could:
-   * - Persist changes to database
-   * - Trigger notifications or analytics
-   */
-  function updateTask(taskId: string, updates: Partial<Task>) {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId ? { ...task, ...updates } : task
-      )
-    );
+  /** Remove a task */
+  async function removeTask(taskId: string) {
+    // Optimistic UI update
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+
+    // Remove from database
+    await deleteTask(taskId);
   }
 
-  // Return the tasks state and CRUD functions to components
   return {
     tasks,
+    loading,
     addTask,
-    toggleTaskCompletion,
-    deleteTask,
-    updateTask,
+    toggleTask,
+    removeTask,
   };
 }

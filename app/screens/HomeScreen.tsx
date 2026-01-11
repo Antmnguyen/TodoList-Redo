@@ -13,16 +13,14 @@ import {
 } from 'react-native';
 import { useTasks } from '../core/hooks/useTasks';
 import { TaskItem } from '../components/tasks/Taskitem';
-import { TaskFactory } from '../core/types/tasks';
 
 export const HomeScreen: React.FC = () => {
   const [inputText, setInputText] = useState('');
-  const { tasks, addTask, toggleTaskCompletion, deleteTask } = useTasks();
+  const { tasks, loading, addTask, toggleTask, removeTask } = useTasks();
 
   const handleAddTask = () => {
     if (inputText.trim()) {
-      const newTask = TaskFactory.create(inputText.trim());
-      addTask(newTask);
+      addTask(inputText.trim());
       setInputText('');
     }
   };
@@ -68,8 +66,8 @@ export const HomeScreen: React.FC = () => {
           renderItem={({ item }) => (
             <TaskItem
               task={item}
-              onToggle={toggleTaskCompletion}
-              onDelete={deleteTask}
+              onToggle={toggleTask}
+              onDelete={removeTask}
             />
           )}
           contentContainerStyle={styles.listContent}
