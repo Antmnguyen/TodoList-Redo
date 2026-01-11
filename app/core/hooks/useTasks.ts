@@ -1,155 +1,82 @@
-import { useEffect, useState } from 'react';
+// app/core/hooks/useTasks.ts
+import { useState, useEffect } from 'react';
 import { Task } from '../types/tasks';
+import { getAllTasks, saveTask, deleteTask } from '../services/storage/taskStorage';
 
 /**
  * useTasks Hook
+ * ----------------
+ * Core task management for Sprint 2.
+ * Responsibilities:
+ *  - Manage task state in memory
+ *  - Persist tasks to SQLite via taskStorage.ts
+ *  - Keep UI decoupled from database
  *
- * RESPONSIBILITY:
- * - Manage in-memory task state (SOURCE OF TRUTH)
- * - Trigger persistence as a SIDE EFFECT (Sprint 2)
- *
- * This hook:
- * ✅ Knows tasks are persisted
- * ❌ Does NOT know how (SQLite, AsyncStorage, etc.)
- *
- * Persistence is intentionally abstracted away.
+ * Future-proofing:
+ *  - Can add analytics, streaks, geofencing, etc.
+ *  - All changes happen in storage layer without touching this hook
  */
-export function useTasks(initialTasks: Task[] = []) {
-  /**
-   * In-memory task state.
-   *
-   * GOLDEN RULE:
-   * This state is the source of truth.
-   * Disk storage exists only for durability across restarts.
-   */
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+export function useTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  /**
-   * =========================
-   * Sprint 2 – Storage Wiring
-   * =========================
-   *
-   * This effect will:
-   * - Load tasks from persistent storage on app startup
-   * - Populate in-memory state
-   *
-   * IMPORTANT:
-   * - Runs once
-   * - Failure is non-fatal
-   * - UI must still work with an empty list
-   *
-   * NOTE:
-   * Actual storage implementation (SQLite) will live in:
-   * app/core/services/storage/taskStorage.ts
-   */
+  // Load tasks from DB on mount
   useEffect(() => {
-    // async function loadTasksFromStorage() {
-    //   try {
-    //     const storedTasks = await taskStorage.getAllTasks();
-    //     setTasks(storedTasks);
-    //   } catch (error) {
-    //     console.error('Failed to load tasks from storage', error);
-    //     setTasks([]); // App still runs
-    //   }
-    // }
-    //
-    // loadTasksFromStorage();
+    loadTasks();
   }, []);
 
-  /**
-   * addTask
-   *
-   * FLOW (Sprint 2):
-   * 1. Update in-memory state immediately
-   * 2. Persist asynchronously (side effect)
-   *
-   * UI must NEVER block on disk writes.
-   */
-  function addTask(task: Task) {
-    setTasks(prev => [...prev, task]);
-
-    // Sprint 2 (side effect only):
-    // taskStorage.saveTask(task).catch(console.error);
+  /** Load all tasks from persistent storage */
+  async function loadTasks() {
+    setLoading(true);
+    const loadedTasks = await getAllTasks();
+    setTasks(loadedTasks);
+    setLoading(false);
   }
 
-  /**
-   * toggleTaskCompletion
-   *
-   * FLOW:
-   * - Optimistic UI update
-   * - Persistence happens after state update
-   *
-   * Storage failures do NOT rollback UI.
-   */
-  function toggleTaskCompletion(taskId: string) {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
+  /** Add a new task */
+  async function addTask(title: string) {
+    const newTask: Task = {
+      id: Date.now().toString(), // simple unique ID for Sprint 2
+      title,
+      completed: false,
+      createdAt: new Date(),
+    };
 
-    // Sprint 2:
-    // const updatedTask = ...
-    // taskStorage.saveTask(updatedTask).catch(console.error);
+    // Optimistic UI update
+    setTasks(prev => [newTask, ...prev]);
+
+    // Persist to database
+    await saveTask(newTask);
   }
 
-  /**
-   * deleteTask
-   *
-   * Deletion is optimistic.
-   * Persistence happens asynchronously.
-   */
-  function deleteTask(taskId: string) {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  /** Toggle task completion */
+  async function toggleTask(taskId: string) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
-    // Sprint 2:
-    // taskStorage.deleteTask(taskId).catch(console.error);
+    const updatedTask: Task = { ...task, completed: !task.completed };
+
+    // Optimistic UI update
+    setTasks(prev => prev.map(t => (t.id === taskId ? updatedTask : t)));
+
+    // Persist to database
+    await saveTask(updatedTask);
   }
 
-  /**
-   * updateTask
-   *
-   * General-purpose update helper.
-   * Useful for future features (editing title, metadata, etc.).
-   *
-   * Persistence will be handled the same way:
-   * UI first, disk second.
-   */
-  function updateTask(taskId: string, updates: Partial<Task>) {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId ? { ...task, ...updates } : task
-      )
-    );
+  /** Remove a task */
+  async function removeTask(taskId: string) {
+    // Optimistic UI update
+    setTasks(prev => prev.filter(t => t.id !== taskId));
 
-    // Sprint 2:
-    // const updatedTask = ...
-    // taskStorage.saveTask(updatedTask).catch(console.error);
+    // Remove from database
+    await deleteTask(taskId);
   }
 
-  /**
-   * Public API
-   *
-   * UI consumes this object.
-   * UI does NOT know persistence exists.
-   */
   return {
     tasks,
+    loading,
     addTask,
-    toggleTaskCompletion,
-    deleteTask,
-    updateTask,
+    toggleTask,
+    removeTask,
   };
 }
-
-/**
- * DESIGN GUARANTEES (Sprint 2)
- * ---------------------------
- * - Behavior identical to Sprint 1
- * - No UI blocking
- * - No rollback on persistence failure
- * - App survives restarts once storage is wired
- *
- * Future features (history, analytics, sync) will hook in
- * WITHOUT changing UI components.
- */
