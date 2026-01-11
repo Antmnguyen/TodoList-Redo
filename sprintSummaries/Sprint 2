@@ -1,0 +1,158 @@
+# Sprint 2 Summary – Database Architecture & Future-Proofing
+
+## 🎯 What We Built
+**Core Functionality:**
+- ✅ Persistent task storage using SQLite
+- ✅ Add, toggle, delete tasks
+- ✅ Tasks survive app restarts
+- ✅ Clean separation of concerns
+
+---
+
+## 🏗️ Architecture Decisions
+**Problem:**
+- Original `database.ts` was a single 300+ line file
+- Mixed infrastructure, schema, and storage concerns
+- Hard to enable/disable features or expand
+
+**Solution: Modular schema architecture**
+- Split database layer into focused files:
+  - `database.ts` – DB connection only
+  - `schema/*.ts` – Table definitions per feature
+  - `*Storage.ts` – Domain-specific CRUD operations
+- Features can be added without modifying existing code
+
+---
+
+## 📁 File Structure (Created)
+
+app/core/services/storage/
+├── database.ts # 10 lines - DB connection only
+├── taskStorage.ts # CRUD for tasks
+└── schema/
+├── index.ts # Orchestrates schema initialization
+├── core.ts # ✅ ACTIVE - Tasks table (Sprint 2)
+└── [17 skeleton files] # 💤 Future features (Sprint 3+)
+
+yaml
+Copy code
+
+---
+
+## 🏗️ 3-Layer Pattern
+| Layer | Responsibility |
+|-------|----------------|
+| **Infrastructure (`database.ts`)** | Open SQLite connection |
+| **Schema Definitions (`schema/*.ts`)** | Define tables (CREATE TABLE statements) |
+| **Data Access (`*Storage.ts`)** | Execute queries, map SQL rows ↔ domain objects |
+
+**Notes:**
+- `taskStorage.ts` is the only place that knows the tasks table exists
+- Hooks/UI never import SQLite directly
+
+---
+
+## 🔑 Key Architecture Principles
+1. **Separation of Concerns**
+   - `database.ts` → DB connection  
+   - `schema/core.ts` → Tasks table  
+   - `taskStorage.ts` → Task CRUD  
+   - `useTasks.ts` → State management for UI
+2. **Extension Without Modification**
+   - Add new features via new schema/storage files
+   - Core files remain stable
+3. **Single Responsibility**
+   - One schema file per feature
+   - One storage file per domain
+4. **Progressive Enhancement**
+   - Start minimal (Sprint 2: core tasks)
+   - Add features incrementally
+
+---
+
+## 🗂️ Schema Files Created (18 Total)
+
+| Sprint | Feature | Schema File | Storage File | Status |
+|--------|--------|------------|-------------|--------|
+| 2 | Tasks | core.ts | taskStorage.ts | ✅ Active |
+| 3 | Completions | completions.ts | completionStorage.ts | Skeleton |
+| 3 | Priority | priority.ts | taskStorage.ts | Skeleton |
+| 3 | Categories | categories.ts | categoryStorage.ts | Skeleton |
+| 4 | Subtasks | subtasks.ts | subtaskStorage.ts | Skeleton |
+| 4 | Dependencies | dependencies.ts | dependencyStorage.ts | Skeleton |
+| 4 | Recurring | recurring.ts | recurringStorage.ts | Skeleton |
+| 5 | Time Tracking | timeTracking.ts | timeTrackingStorage.ts | Skeleton |
+| 5 | Reminders | reminders.ts | reminderStorage.ts | Skeleton |
+| 6 | Calendar | calendar.ts | calendarStorage.ts | Skeleton |
+| 6 | Google Calendar | googleCalendar.ts | googleCalendarStorage.ts | Skeleton |
+| 7 | Google Fit | googleFit.ts | googleFitStorage.ts | Skeleton |
+| 7 | Geofencing | geofencing.ts | geofenceStorage.ts | Skeleton |
+| 8 | Sharing | sharing.ts | sharingStorage.ts | Skeleton |
+| 8 | Widgets | widgets.ts | widgetStorage.ts | Skeleton |
+| 9 | Screen Time | screenTime.ts | screenTimeStorage.ts | Skeleton |
+| N/A | Metadata | metadata.ts | taskStorage.ts | Skeleton |
+
+---
+
+## 🚀 How to Add Features (Future Sprints)
+
+**Example: Adding Task Streaks**
+1. **Uncomment schema file**
+```ts
+// schema/index.ts
+import { initializeCoreSchema } from './core';
+import { initializeCompletions } from './completions'; // ← Uncomment
+export function initializeAllSchemas() {
+  initializeCoreSchema();
+  initializeCompletions(); // ← Uncomment
+}
+Create storage file
+
+ts
+Copy code
+// completionStorage.ts
+export async function recordCompletion(taskId: string) { /* ... */ }
+export async function getCompletionHistory(taskId: string) { /* ... */ }
+Build feature logic
+
+ts
+Copy code
+// features/streaks/hooks/useStreaks.ts
+import { getCompletionHistory } from '../../../core/services/storage/completionStorage';
+export function useStreaks(taskId: string) { /* ... */ }
+Use in UI
+
+ts
+Copy code
+// features/streaks/components/StreakCounter.tsx
+const { currentStreak } = useStreaks(taskId);
+✅ Zero changes to core files
+
+📋 Key Takeaways
+What Changes When Adding Features:
+
+Uncomment schema file in schema/index.ts
+
+Create new *Storage.ts
+
+Build feature logic in features/[name]/
+
+What DOESN'T Change:
+
+database.ts (DB connection)
+
+core.ts (tasks table)
+
+taskStorage.ts (core CRUD)
+
+useTasks.ts (state management)
+
+Design Philosophy:
+
+Extension points, not modification points
+
+Add files, don’t edit files
+
+Features = plugins, not core changes
+
+Shared data tables (e.g., completions) are reused by multiple features
