@@ -1,6 +1,6 @@
 // app/core/hooks/useTasks.ts
 import { useState, useEffect } from 'react';
-import { Task } from '../types/tasks';
+import { Task } from '../types/task';
 import { getAllTasks, saveTask, deleteTask } from '../services/storage/taskStorage';
 
 /**

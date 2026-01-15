@@ -1,5 +1,5 @@
 // core/types/task.ts
-
+export type TaskKind = 'one_off' | 'permanent' | 'preset';
 /**
  * Core Task Interface
  * Minimal for Sprint 1
@@ -11,7 +11,12 @@ export interface Task {
   title: string;
   completed: boolean;
   createdAt: Date;
-
+    /** 
+   * Task discriminator
+   * Defaults to 'one_off'
+   * Used by domain logic (taskActions)
+   */
+  kind?: TaskKind;
   // ===== OPTIONAL EXTENSIONS =====
   // Can be added later by features
   description?: string;
@@ -101,6 +106,7 @@ export class TaskFactory
       title,
       completed: false,
       createdAt: new Date(),
+      kind: 'one_off', // ✅ DEFAULT
       //TODO  at later sprints call functions from features here to set values for other task attributes
     };
   } //returns a task 

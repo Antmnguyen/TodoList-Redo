@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Task } from '../../core/types/tasks';
+import { Task } from '../../core/types/task';
 
 type TaskItemProps = {
   task: Task;

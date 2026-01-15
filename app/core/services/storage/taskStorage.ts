@@ -15,7 +15,7 @@
  */
 
 import { db } from './database';
-import { Task } from '../../types/tasks';
+import { Task } from '../../types/task';
 
 
 /**
