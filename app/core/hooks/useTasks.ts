@@ -1,75 +1,65 @@
 // app/core/hooks/useTasks.ts
 import { useState, useEffect } from 'react';
 import { Task } from '../types/task';
-import { getAllTasks, saveTask, deleteTask } from '../services/storage/taskStorage';
+import { getAllTasks } from '../services/storage/taskStorage';
+import {
+  createTask,
+  completeTask,
+  deleteTask,
+  uncompleteTask,
+} from '../domain/taskActions';
 
-/**
- * useTasks Hook
- * ----------------
- * Core task management for Sprint 2.
- * Responsibilities:
- *  - Manage task state in memory
- *  - Persist tasks to SQLite via taskStorage.ts
- *  - Keep UI decoupled from database
- *
- * Future-proofing:
- *  - Can add analytics, streaks, geofencing, etc.
- *  - All changes happen in storage layer without touching this hook
- */
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load tasks from DB on mount
+  // Load tasks on mount
   useEffect(() => {
     loadTasks();
   }, []);
 
-  /** Load all tasks from persistent storage */
   async function loadTasks() {
     setLoading(true);
-    const loadedTasks = await getAllTasks();
-    setTasks(loadedTasks);
+    const loaded = await getAllTasks();
+    setTasks(loaded);
     setLoading(false);
   }
 
-  /** Add a new task */
-  async function addTask(title: string) {
-    const newTask: Task = {
-      id: Date.now().toString(), // simple unique ID for Sprint 2
-      title,
-      completed: false,
-      createdAt: new Date(),
-    };
+  /** CREATE */
+  async function addTask(
+    title: string,
+    kind: Task['kind'] = 'one_off',
+    additionalData?: Partial<Task>
+  ) {
+    const task = await createTask(title, kind, additionalData);
 
-    // Optimistic UI update
-    setTasks(prev => [newTask, ...prev]);
-
-    // Persist to database
-    await saveTask(newTask);
+    // Optimistic insert
+    setTasks(prev => [task, ...prev]);
   }
 
-  /** Toggle task completion */
+  /** COMPLETE / TOGGLE */
   async function toggleTask(taskId: string) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    const updatedTask: Task = { ...task, completed: !task.completed };
+    const updated = task.completed
+      ? await uncompleteTask(task)
+      : await completeTask(task);
 
-    // Optimistic UI update
-    setTasks(prev => prev.map(t => (t.id === taskId ? updatedTask : t)));
-
-    // Persist to database
-    await saveTask(updatedTask);
+    setTasks(prev =>
+      prev.map(t => (t.id === taskId ? updated : t))
+    );
   }
 
-  /** Remove a task */
+  /** DELETE */
   async function removeTask(taskId: string) {
-    // Optimistic UI update
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Optimistic removal
     setTasks(prev => prev.filter(t => t.id !== taskId));
 
-    // Remove from database
-    await deleteTask(taskId);
+    await deleteTask(task);
   }
 
   return {
@@ -78,5 +68,6 @@ export function useTasks() {
     addTask,
     toggleTask,
     removeTask,
+    reload: loadTasks,
   };
 }

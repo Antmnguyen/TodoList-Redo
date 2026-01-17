@@ -9,7 +9,6 @@ import {
   pushPermanentTaskForward,
 } from '../../features/permanentTask/utils/permanentTaskActions';
 
-
 // ===== STORAGE =====
 import { saveTask } from '../services/storage/taskStorage';
 import { deleteTask as deleteTaskDB } from '../services/storage/taskStorage';
@@ -42,10 +41,6 @@ export async function createTask(
   switch (kind) {
     case 'permanent':
       return await createPermanentTask(title, additionalData);
-    
-    case 'preset':
-      // Future: return await createPresetTask(title, additionalData);
-      throw new Error('Preset tasks not yet implemented');
     
     case 'one_off':
     default:
