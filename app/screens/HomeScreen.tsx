@@ -1,6 +1,4 @@
 // app/screens/HomeScreen.tsx
-// Main screen using your useTasks hook
-
 import React, { useState } from 'react';
 import {
   View,
@@ -13,16 +11,40 @@ import {
 } from 'react-native';
 import { useTasks } from '../core/hooks/useTasks';
 import { TaskItem } from '../components/tasks/Taskitem';
+import { Task } from '../core/types/task';
 
 export const HomeScreen: React.FC = () => {
   const [inputText, setInputText] = useState('');
+  const [creatingPermanent, setCreatingPermanent] = useState(false);
+
+  // PERMANENT TASK EXTRA STATE (quick & dirty)
+  const [interval, setInterval] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [dayOfWeek, setDayOfWeek] = useState('1');
+  const [dayOfMonth, setDayOfMonth] = useState('1');
+
   const { tasks, loading, addTask, toggleTask, removeTask } = useTasks();
 
-  const handleAddTask = () => {
-    if (inputText.trim()) {
-      addTask(inputText.trim());
-      setInputText('');
+  const handleAddTask = async () => {
+    if (!inputText.trim()) return;
+
+    const kind: Task['kind'] = creatingPermanent ? 'permanent' : 'one_off';
+
+    let additionalData: Partial<Task> | undefined = undefined;
+
+    if (creatingPermanent) {
+      additionalData = {
+        templateTitle: inputText.trim(),
+        autoRepeat: {
+          interval,
+          ...(interval === 'weekly' && { dayOfWeek: Number(dayOfWeek) }),
+          ...(interval === 'monthly' && { dayOfMonth: Number(dayOfMonth) }),
+        },
+      } as any;
     }
+
+    await addTask(inputText.trim(), kind, additionalData);
+
+    setInputText('');
   };
 
   return (
@@ -39,71 +61,102 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Add a new task..."
+          placeholder={
+            creatingPermanent
+              ? 'Add a permanent task template...'
+              : 'Add a new task...'
+          }
           value={inputText}
           onChangeText={setInputText}
           onSubmitEditing={handleAddTask}
           returnKeyType="done"
         />
+
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddTask}
+          style={[
+            styles.permanentToggle,
+            creatingPermanent && styles.permanentToggleActive,
+          ]}
+          onPress={() => setCreatingPermanent(prev => !prev)}
         >
+          <Text style={styles.permanentToggleText}>P</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Task List */}
-      {tasks.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No tasks yet!</Text>
-          <Text style={styles.emptySubtext}>Add one above to get started</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <TaskItem
-              task={item}
-              onToggle={toggleTask}
-              onDelete={removeTask}
+      {/* QUICK PERMANENT OPTIONS */}
+      {creatingPermanent && (
+        <View style={styles.permanentOptions}>
+          <Text>Repeat:</Text>
+
+          <View style={styles.row}>
+            {(['daily', 'weekly', 'monthly'] as const).map(i => (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.intervalButton,
+                  interval === i && styles.intervalActive,
+                ]}
+                onPress={() => setInterval(i)}
+              >
+                <Text style={styles.intervalText}>{i}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {interval === 'weekly' && (
+            <TextInput
+              style={styles.smallInput}
+              placeholder="Day of week (0–6)"
+              keyboardType="numeric"
+              value={dayOfWeek}
+              onChangeText={setDayOfWeek}
             />
           )}
-          contentContainerStyle={styles.listContent}
-        />
+
+          {interval === 'monthly' && (
+            <TextInput
+              style={styles.smallInput}
+              placeholder="Day of month (1–31)"
+              keyboardType="numeric"
+              value={dayOfMonth}
+              onChangeText={setDayOfMonth}
+            />
+          )}
+        </View>
       )}
+
+      {/* Task List */}
+      <FlatList
+        data={tasks}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <TaskItem task={item} onToggle={toggleTask} onDelete={removeTask} />
+        )}
+        contentContainerStyle={styles.listContent}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+
   header: {
     padding: 20,
     paddingTop: 60,
     backgroundColor: '#007AFF',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.8,
-    marginTop: 4,
-  },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
+  subtitle: { fontSize: 16, color: '#fff', opacity: 0.8 },
+
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   input: {
     flex: 1,
@@ -111,8 +164,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 16,
   },
+
   addButton: {
     width: 44,
     height: 44,
@@ -122,28 +175,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 8,
   },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '300',
-  },
-  listContent: {
-    padding: 16,
-  },
-  emptyContainer: {
-    flex: 1,
+  addButtonText: { color: '#fff', fontSize: 28 },
+
+  permanentToggle: {
+    width: 44,
+    height: 44,
+    backgroundColor: '#ccc',
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    marginLeft: 8,
   },
-  emptyText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#999',
-    marginBottom: 8,
+  permanentToggleActive: { backgroundColor: '#FF9500' },
+  permanentToggleText: { color: '#fff', fontWeight: 'bold' },
+
+  permanentOptions: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#bbb',
+
+  row: { flexDirection: 'row', marginVertical: 8 },
+
+  intervalButton: {
+    padding: 8,
+    backgroundColor: '#eee',
+    marginRight: 8,
+    borderRadius: 6,
   },
+  intervalActive: { backgroundColor: '#007AFF' },
+  intervalText: { color: '#000' },
+
+  smallInput: {
+    height: 36,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    marginTop: 6,
+  },
+
+  listContent: { padding: 16 },
 });
