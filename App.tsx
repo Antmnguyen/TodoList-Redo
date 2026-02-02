@@ -14,15 +14,13 @@
 // =============================================================================
 
 import React from 'react';
-import { AllTasksScreen } from './app/screens/tasks/AllTasksScreen';
+import { TasksStack } from './app/navigation/stacks/TasksStack';
 import { initializeAllSchemas } from './app/core/services/storage/schema';
 
 // Initialize database tables before the app renders
-// Sprint 2: database initialize all schema
-initializeAllSchemas(); // function located in services/storage/schema.ts
+initializeAllSchemas();
 
 export default function App() {
-  // TEMPORARY: Loading AllTasksScreen directly for testing the floating button
-  // In production, this should return the navigation stack (AppNavigator/TabNavigator)
-  return <AllTasksScreen />;
+  // TasksStack handles all task-related screens and the FAB navigation
+  return <TasksStack />;
 }

@@ -19,6 +19,7 @@ import {
   getTemplateById,
   getAllTemplates,
 } from '../../../core/services/storage/permanentTaskStorage';
+import { saveTask } from '../../../core/services/storage/taskStorage';
 
 /**
  * PERMANENT TASK ACTIONS
@@ -71,12 +72,12 @@ export async function createPermanentTask(
       location: data.location,
     });
 
-    // Validate and save
+    // Validate and save to template_instances table
     validateInstance(instance);
     await savePermanentInstance(instance);
 
     // Convert to Task type
-    return {
+    const task: Task = {
       id: instance.id,
       title: instance.title || instance.templateTitle,
       completed: instance.completed || false,
@@ -90,7 +91,12 @@ export async function createPermanentTask(
         isTemplate: instance.isTemplate,
         autoRepeat: instance.autoRepeat,
       },
-    } as Task;
+    };
+
+    // Also save to tasks table so it shows up in getAllTasks()
+    await saveTask(task);
+
+    return task;
   }
 
   // CASE 2: Create new template from scratch

@@ -16,14 +16,14 @@
 //
 // DESIGN DECISIONS:
 // 1. Form state is local to this screen (not in a hook) since it's UI state
-// 2. onSave callback will eventually pass data to permanentTaskActions
+// 2. handleSave calls taskActions.createTask() which routes to permanentTaskActions
 // 3. Each input section is separated for easy expansion
 // 4. Optional fields are in collapsible/expandable sections
 //
-// NEXT STEPS:
-// - Connect onSave to permanentTaskActions.createTemplate()
+// TODO:
+// - Add taskType to PermanentTask type and storage (requires restructuring)
 // - Add navigation back to previous screen after save
-// - Add validation feedback
+// - Add loading state during save
 // =============================================================================
 
 import React, { useState } from 'react';
@@ -38,6 +38,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { createTask } from '../../core/domain/taskActions';
 
 // =============================================================================
 // TYPES
@@ -94,7 +95,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
   // =========================================================================
 
   // Validate and collect form data
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate required fields
     if (!templateTitle.trim()) {
       Alert.alert('Required Field', 'Please enter a template title');
@@ -107,7 +108,6 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
     }
 
     // Build form data object
-    // Note: taskType is captured here for frontend, will be added to type definition later
     const formData: PermanentTaskFormData & { taskType?: string } = {
       templateTitle: templateTitle.trim(),
       taskType: taskType.trim(),
@@ -125,22 +125,41 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
       };
     }
 
-    // TODO: Connect to backend via permanentTaskActions
-    // For now, just log and show alert
-    console.log('Permanent Task Form Data:', formData);
-    Alert.alert(
-      'Template Created',
-      `Template "${formData.templateTitle}" ready to save.\n\nThis will connect to backend in next sprint.`,
-      [{ text: 'OK', onPress: onSave ? () => onSave(formData) : undefined }]
-    );
+    try {
+      // Create the permanent task template via taskActions
+      // TODO: taskType is passed but not stored yet - needs storage restructuring
+      const newTemplate = await createTask(
+        formData.templateTitle,
+        'permanent',
+        {
+          templateTitle: formData.templateTitle,
+          location: formData.location,
+          autoRepeat: formData.autoRepeat,
+          // TODO: Add taskType to PermanentTask type and storage
+          // taskType: formData.taskType,
+        }
+      );
+
+      console.log('Permanent Task Template Created:', newTemplate);
+
+      // Call onSave callback with form data
+      if (onSave) {
+        onSave(formData);
+      } else {
+        Alert.alert('Success', `Template "${formData.templateTitle}" created!`);
+      }
+    } catch (error) {
+      console.error('Failed to create permanent task template:', error);
+      Alert.alert(
+        'Error',
+        `Failed to create template: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   };
 
   const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      Alert.alert('Cancelled', 'Create permanent task cancelled');
-    }
+    console.log('CreatePermanentTaskScreen: Cancel pressed, onCancel:', !!onCancel);
+    onCancel?.();
   };
 
   // =========================================================================
