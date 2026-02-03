@@ -129,9 +129,9 @@ export async function deletePermanentTemplate(templateId: string): Promise<void>
 export async function savePermanentInstance(instance: PermanentTask): Promise<void> {
   db.runSync(
     `INSERT OR REPLACE INTO template_instances
-      (instanceId, templateId, createdAt)
-     VALUES (?, ?, ?)`,
-    [instance.id, instance.permanentId, instance.createdAt]
+      (instanceId, templateId, createdAt, dueDate)
+     VALUES (?, ?, ?, ?)`,
+    [instance.id, instance.permanentId, instance.createdAt, instance.dueDate || null]
   );
 
   db.runSync(
@@ -150,6 +150,7 @@ export async function getInstancesByTemplateId(templateId: string): Promise<Perm
     instanceId: string;
     templateId: string;
     createdAt: number;
+    dueDate: number | null;
   }>(`SELECT * FROM template_instances WHERE templateId = ? ORDER BY createdAt DESC`, [templateId]);
 
   // Get the template to copy its data to instances
@@ -164,6 +165,7 @@ export async function getInstancesByTemplateId(templateId: string): Promise<Perm
     templateTitle: template.templateTitle,
     isTemplate: false,
     createdAt: row.createdAt,
+    dueDate: row.dueDate || undefined,
     location: template.location,
     autoRepeat: template.autoRepeat,
     completed: false, // Note: completion status not stored in schema yet
@@ -178,6 +180,7 @@ export async function getInstanceById(instanceId: string): Promise<PermanentTask
     instanceId: string;
     templateId: string;
     createdAt: number;
+    dueDate: number | null;
   }>(`SELECT * FROM template_instances WHERE instanceId = ?`, [instanceId]);
 
   if (rows.length === 0) {
@@ -196,10 +199,43 @@ export async function getInstanceById(instanceId: string): Promise<PermanentTask
     templateTitle: template.templateTitle,
     isTemplate: false,
     createdAt: row.createdAt,
+    dueDate: row.dueDate || undefined,
     location: template.location,
     autoRepeat: template.autoRepeat,
     completed: false,
   };
+}
+
+/**
+ * Update the due date of a permanent task instance.
+ * Pass null to clear the due date.
+ * Also updates the corresponding row in the tasks table to keep both in sync.
+ */
+export async function updateInstanceDueDate(instanceId: string, dueDate: number | null): Promise<void> {
+  db.runSync(
+    `UPDATE template_instances SET dueDate = ? WHERE instanceId = ?`,
+    [dueDate, instanceId]
+  );
+  // Keep tasks table in sync
+  db.runSync(
+    `UPDATE tasks SET due_date = ? WHERE id = ?`,
+    [dueDate, instanceId]
+  );
+}
+
+/**
+ * Read the due date of a single permanent task instance.
+ * Returns null if the instance has no due date or doesn't exist.
+ */
+export async function getInstanceDueDate(instanceId: string): Promise<number | null> {
+  const rows = db.getAllSync<{ dueDate: number | null }>(
+    `SELECT dueDate FROM template_instances WHERE instanceId = ?`,
+    [instanceId]
+  );
+  if (rows.length === 0 || rows[0].dueDate === null) {
+    return null;
+  }
+  return rows[0].dueDate;
 }
 
 /**

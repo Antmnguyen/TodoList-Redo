@@ -27,6 +27,7 @@ export function createPermanentTasksSchema(): void {
       instanceId TEXT NOT NULL,
       templateId TEXT NOT NULL,
       createdAt INTEGER NOT NULL,               -- timestamp in ms
+      dueDate INTEGER,                          -- optional due date in ms
       PRIMARY KEY (instanceId, templateId),
       FOREIGN KEY (instanceId) REFERENCES tasks(id) ON DELETE CASCADE,
       FOREIGN KEY (templateId) REFERENCES templates(permanentId) ON DELETE CASCADE
@@ -51,6 +52,13 @@ export function createPermanentTasksSchema(): void {
       lastUpdatedAt INTEGER NOT NULL
     );
   `);
+
+  // Migration: add dueDate column to existing template_instances tables
+  try {
+    db.execSync(`ALTER TABLE template_instances ADD COLUMN dueDate INTEGER`);
+  } catch (_) {
+    // Column already exists, ignore
+  }
 
   console.log('✅ Permanent tasks schema created (templates, instances, stats)');
 }

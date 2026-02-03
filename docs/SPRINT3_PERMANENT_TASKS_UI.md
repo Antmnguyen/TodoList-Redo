@@ -26,10 +26,7 @@ TasksStack (navigation + FAB + refresh logic)
 3. **View tasks**: AllTasksScreen reads from `tasks` table (includes permanent instances)
 
 ## TODO
-- [ ] Add taskType to PermanentTask schema (requires storage restructure)
 - [ ] Save dueDate to tasks table (schema update needed)
-- [ ] Group templates by taskType in UsePermanentTaskScreen
-- [ ] Add search/filter to UsePermanentTaskScreen
-- [ ] Show template stats preview before selection
-- [ ] Custom title override when creating instance
-- [ ] Pull-to-refresh on AllTasksScreen
+- [ ]  Get Create task screen working
+- [ ] Enable due date changing for any current task
+- [ ] Enable Repeatability editing for permanet task in use permanent task screen

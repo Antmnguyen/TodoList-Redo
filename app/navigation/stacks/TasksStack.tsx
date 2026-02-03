@@ -9,6 +9,7 @@
 //
 // SCREENS IN THIS STACK:
 // - AllTasks: Main task list (default)
+// - CreateTask: Create a new task (name + due date + type)
 // - CreatePermanentTask: Create a new permanent task template
 // - UsePermanentTask: Select and use an existing template
 //
@@ -20,6 +21,7 @@ import { View, StyleSheet } from 'react-native';
 import { AllTasksScreen } from '../../screens/tasks/AllTasksScreen';
 import { CreatePermanentTaskScreen, PermanentTaskFormData } from '../../screens/tasks/CreatePermanentTaskScreen';
 import { UsePermanentTaskScreen } from '../../screens/tasks/UsePermanentTaskScreen';
+import { CreateTaskScreen, CreateTaskFormData } from '../../screens/tasks/CreateTaskScreen';
 import { FloatingCreateTaskButton } from '../../components/tasks/FloatingCreateTaskButton';
 import { CreateTaskModal } from '../../components/tasks/CreateTaskModal';
 import { createTask } from '../../core/domain/taskActions';
@@ -29,7 +31,7 @@ import { Task } from '../../core/types/task';
 // TYPES
 // =============================================================================
 
-type TasksScreen = 'AllTasks' | 'CreatePermanentTask' | 'UsePermanentTask';
+type TasksScreen = 'AllTasks' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask';
 
 // =============================================================================
 // COMPONENT
@@ -62,9 +64,9 @@ export const TasksStack: React.FC = () => {
   // FAB ACTION HANDLERS
   // =========================================================================
 
-  // Opens the CreateTaskModal for one-off tasks
+  // Navigates to CreateTaskScreen (full screen with name, date, type)
   const handleCreateTask = () => {
-    setCreateTaskModalVisible(true);
+    navigateTo('CreateTask');
   };
 
   // Navigates to UsePermanentTaskScreen
@@ -88,6 +90,15 @@ export const TasksStack: React.FC = () => {
     setRefreshKey(prev => prev + 1); // Refresh task list
   };
 
+  // Called when a task is created via CreateTaskScreen
+  // UI only for now — just logs and navigates back
+  // TODO: Wire to taskActions.createTask() when ready
+  const handleCreateTaskSave = (data: CreateTaskFormData) => {
+    console.log('Task created from CreateTaskScreen:', data);
+    setRefreshKey(prev => prev + 1);
+    goBack();
+  };
+
   // Called when permanent task template is saved
   const handlePermanentTaskSave = (data: PermanentTaskFormData) => {
     console.log('Permanent task template saved:', data);
@@ -107,6 +118,14 @@ export const TasksStack: React.FC = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
+      case 'CreateTask':
+        return (
+          <CreateTaskScreen
+            onSave={handleCreateTaskSave}
+            onCancel={goBack}
+          />
+        );
+
       case 'CreatePermanentTask':
         return (
           <CreatePermanentTaskScreen

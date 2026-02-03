@@ -16,6 +16,7 @@ import {
   deletePermanentTemplate as deletePermanentTemplateDB,
   deletePermanentInstance as deletePermanentInstanceDB,
   updateTemplateStats,
+  updateInstanceDueDate,
   getTemplateById,
   getAllTemplates,
 } from '../../../core/services/storage/permanentTaskStorage';
@@ -286,6 +287,10 @@ export async function reassignPermanentTask(
   } else {
     validateInstance(updatedPermanentTask);
     await savePermanentInstance(updatedPermanentTask);
+    // Sync due date to tasks table if it changed
+    if (updatedPermanentTask.dueDate !== permanentTask.dueDate) {
+      await updateInstanceDueDate(task.id, updatedPermanentTask.dueDate || null);
+    }
   }
 
   // Return as Task type
@@ -340,6 +345,9 @@ export async function pushPermanentTaskForward(
   };
 
   await savePermanentInstance(permanentTask);
+
+  // Sync due date to tasks table
+  await updateInstanceDueDate(task.id, newDueDate);
 
   // Return as Task type
   return {
