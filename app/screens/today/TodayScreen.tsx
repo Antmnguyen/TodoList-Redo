@@ -1,72 +1,103 @@
 // app/screens/today/TodayScreen.tsx
-// Today tab: useTasks + filtered list + FloatingCreateTaskButton + CreateTaskModal.
+// =============================================================================
+// TODAY SCREEN
+// =============================================================================
+//
+// Displays only tasks that are due today.
+// Nearly identical to AllTasksScreen, but with date filtering.
+//
+// FILTER LOGIC:
+//   Uses filterTasksDueToday() from app/core/utils/taskFilters.ts
+//   Only shows tasks where dueDate falls within today (midnight to midnight)
+//
+// SORT LOGIC:
+//   Uses sortTasksByCompletion() from app/core/utils/taskSorting.ts
+//   Uncompleted tasks appear first, completed tasks at the bottom
+//
+// =============================================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
-import { FloatingCreateTaskButton } from '../../components/tasks/FloatingCreateTaskButton';
-import { CreateTaskModal } from '../../components/tasks/CreateTaskModal';
+import { filterTasksDueToday } from '../../core/utils/taskFilters';
+import { sortTasksByCompletion } from '../../core/utils/taskSorting';
 
-function isToday(d: Date): boolean {
-  const today = new Date();
-  return (
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate()
-  );
-}
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export const TodayScreen: React.FC = () => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const { tasks, addTask, toggleTask, removeTask } = useTasks();
+  // ---------------------------------------------------------------------------
+  // Hook providing task data and operations
+  // Location: app/core/hooks/useTasks.ts
+  // ---------------------------------------------------------------------------
+  const { tasks, toggleTask, removeTask } = useTasks();
 
-  const todayTasks = useMemo(
-    () =>
-      tasks.filter(
-        t => isToday(new Date(t.createdAt)) || (t.dueDate && isToday(new Date(t.dueDate)))
-      ),
-    [tasks]
-  );
+  // ---------------------------------------------------------------------------
+  // Filter: Only tasks due today
+  // ---------------------------------------------------------------------------
+  // Uses filterTasksDueToday from app/core/utils/taskFilters.ts
+  // Returns tasks where dueDate >= start of today AND dueDate < start of tomorrow
+  // ---------------------------------------------------------------------------
+  const todayTasks = useMemo(() => filterTasksDueToday(tasks), [tasks]);
 
-  const handleSubmitTask = async (title: string) => {
-    await addTask(title, 'one_off', { dueDate: new Date() });
-    setModalVisible(false);
-  };
+  // ---------------------------------------------------------------------------
+  // Sort: Uncompleted first, completed last
+  // ---------------------------------------------------------------------------
+  // Uses sortTasksByCompletion from app/core/utils/taskSorting.ts
+  // Memoized to avoid re-sorting on every render
+  // ---------------------------------------------------------------------------
+  const sortedTasks = useMemo(() => sortTasksByCompletion(todayTasks), [todayTasks]);
+
+  // ---------------------------------------------------------------------------
+  // Calculate active (uncompleted) count for subtitle
+  // ---------------------------------------------------------------------------
+  const activeCount = todayTasks.filter(t => !t.completed).length;
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Today</Text>
         <Text style={styles.subtitle}>
-          {todayTasks.filter(t => !t.completed).length} to do
+          {activeCount} {activeCount === 1 ? 'task' : 'tasks'} remaining
         </Text>
       </View>
 
+      {/* Task List */}
       <TaskList
-        tasks={todayTasks}
+        tasks={sortedTasks}
         onToggle={toggleTask}
         onDelete={removeTask}
-        emptyMessage="Nothing for today. Tap + to add a task."
-      />
-
-      <FloatingCreateTaskButton onPress={() => setModalVisible(true)} />
-      <CreateTaskModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleSubmitTask}
+        emptyMessage="No tasks due today!"
       />
     </SafeAreaView>
   );
 };
 
+// =============================================================================
+// STYLES
+// =============================================================================
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   header: {
     padding: 20,
     paddingTop: 60,
-    backgroundColor: '#34C759',
+    backgroundColor: '#34C759', // Green - distinct from All Tasks (blue)
   },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  subtitle: { fontSize: 16, color: '#fff', opacity: 0.8 },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.8,
+  },
 });

@@ -26,7 +26,13 @@ TasksStack (navigation + FAB + refresh logic)
 3. **View tasks**: AllTasksScreen reads from `tasks` table (includes permanent instances)
 
 ## TODO
-- [ ] Save dueDate to tasks table (schema update needed)
-- [ ]  Get Create task screen working
+- [x] Save dueDate to tasks table (schema update needed) - DONE (Feb 15)
+- [x] Get Create task screen working - DONE (Feb 15)
 - [ ] Enable due date changing for any current task
-- [ ] Enable Repeatability editing for permanet task in use permanent task screen
+- [ ] Enable Repeatability editing for permanent task in use permanent task screen
+
+---
+
+## Update (Feb 15, 2026)
+Navigation architecture changed. TasksStack deprecated - all navigation now handled by MainNavigator.
+See: `docs/ARCHITECTURE_GUIDE.md`

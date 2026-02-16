@@ -1,5 +1,7 @@
 # Sprint 3: Create Task Screen — Feb 2, 2026
 
+**Status: COMPLETE (Feb 15, 2026)**
+
 ## What Was Done
 Added a full Create Task screen accessible from the FAB "Create task" button. Replaces the old title-only modal with a proper screen containing:
 - Task name input
@@ -9,6 +11,11 @@ Added a full Create Task screen accessible from the FAB "Create task" button. Re
 ## Files Changed
 - `app/screens/tasks/CreateTaskScreen.tsx` — New screen (UI only, no backend)
 - `app/navigation/stacks/TasksStack.tsx` — Added `CreateTask` to screen stack, FAB navigates here
+
+## Update (Feb 15, 2026)
+- Backend connection complete - tasks now persist to SQLite
+- Navigation moved to MainNavigator (TasksStack deprecated)
+- See: `docs/ARCHITECTURE_GUIDE.md`
 
 ## Files NOT Changed
 - `app/core/domain/taskActions.ts` — Already has `createTask(title, kind, additionalData)`

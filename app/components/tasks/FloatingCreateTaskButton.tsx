@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   // FAB button styles - rounded box positioned in bottom-right corner
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 90,  // 65px tab bar + 25px margin
     right: 24,
     width: 56,
     height: 56,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    paddingBottom: 90, // Positions menu above the FAB
+    paddingBottom: 156, // Positions menu above the FAB (90 FAB bottom + 56 FAB height + 10 margin)
     paddingRight: 24,  // Aligns menu with FAB's right edge
   },
   // White container holding the menu options

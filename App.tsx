@@ -3,24 +3,31 @@
 // APP ENTRY POINT
 // =============================================================================
 //
-// TEMPORARY CHANGE FOR TESTING (UI Sprint 3):
-// - Changed from: import { HomeScreen } from './app/screens/HomeScreen';
-// - Changed to:   import { AllTasksScreen } from './app/screens/tasks/AllTasksScreen';
+// Root component that initializes the database and renders the main navigator.
 //
-// This bypasses the normal navigation flow and loads AllTasksScreen directly
-// so we can test the new FloatingCreateTaskButton with its popup menu.
+// NAVIGATION STRUCTURE:
+//   App.tsx
+//     └── MainNavigator (bottom tab bar)
+//           ├── TasksStack (All Tasks tab)
+//           │     ├── AllTasksScreen
+//           │     ├── CreateTaskScreen
+//           │     ├── CreatePermanentTaskScreen
+//           │     └── UsePermanentTaskScreen
+//           ├── TodayScreen (Today tab)
+//           ├── StatsScreen (Stats tab)
+//           └── BrowseScreen (Browse tab)
 //
-// TO REVERT: Change the import back to HomeScreen and return <HomeScreen />
 // =============================================================================
 
 import React from 'react';
-import { TasksStack } from './app/navigation/stacks/TasksStack';
+import { MainNavigator } from './app/navigation/MainNavigator';
 import { initializeAllSchemas } from './app/core/services/storage/schema';
 
 // Initialize database tables before the app renders
 initializeAllSchemas();
 
 export default function App() {
-  // TasksStack handles all task-related screens and the FAB navigation
-  return <TasksStack />;
+  // MainNavigator handles bottom tab bar and all screen navigation
+  // Location: app/navigation/MainNavigator.tsx
+  return <MainNavigator />;
 }
