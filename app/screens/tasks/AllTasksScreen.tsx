@@ -17,14 +17,23 @@
 // - CreateTaskModal
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
+import { sortTasksByCompletion } from '../../core/utils/taskSorting';
 
 export const AllTasksScreen: React.FC = () => {
   // Hook providing task data and operations
   const { tasks, toggleTask, removeTask } = useTasks();
+
+  // -------------------------------------------------------------------------
+  // Sort tasks: uncompleted first, completed last
+  // -------------------------------------------------------------------------
+  // Uses sortTasksByCompletion from app/core/utils/taskSorting.ts
+  // Memoized to avoid re-sorting on every render (only when tasks change)
+  // -------------------------------------------------------------------------
+  const sortedTasks = useMemo(() => sortTasksByCompletion(tasks), [tasks]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,7 +45,7 @@ export const AllTasksScreen: React.FC = () => {
       </View>
 
       <TaskList
-        tasks={tasks}
+        tasks={sortedTasks}
         onToggle={toggleTask}
         onDelete={removeTask}
         emptyMessage="No tasks yet. Tap + to add one."

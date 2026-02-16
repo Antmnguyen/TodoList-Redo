@@ -91,11 +91,41 @@ export const TasksStack: React.FC = () => {
   };
 
   // Called when a task is created via CreateTaskScreen
-  // UI only for now — just logs and navigates back
-  // TODO: Wire to taskActions.createTask() when ready
-  const handleCreateTaskSave = (data: CreateTaskFormData) => {
-    console.log('Task created from CreateTaskScreen:', data);
+  // -------------------------------------------------------------------------
+  // DATA FLOW:
+  //   CreateTaskScreen.handleSave() emits CreateTaskFormData via onSave prop
+  //   → This function receives { title, dueDate, category }
+  //   → Calls createTask() to save to database
+  //   → Refreshes task list and navigates back
+  //
+  // FUNCTIONS CALLED:
+  //   createTask(title, kind, additionalData)
+  //     - Location: app/core/domain/taskActions.ts
+  //     - Creates a Task object via TaskFactory.create()
+  //     - Merges additionalData (dueDate, category) into the task
+  //     - Calls saveTask() to persist to SQLite
+  //
+  //   saveTask(task)
+  //     - Location: app/core/services/storage/taskStorage.ts
+  //     - Writes to 'tasks' table: id, title, completed, created_at, due_date
+  //     - Note: 'category' is on Task type but not in DB schema yet
+  //
+  // PARAMETERS:
+  //   data.title    - Task name (required, from text input)
+  //   data.dueDate  - Due date (Date object, defaults to today)
+  //   data.category - Task category (optional, e.g. "Workout", "School")
+  // -------------------------------------------------------------------------
+  const handleCreateTaskSave = async (data: CreateTaskFormData) => {
+    // Save task to database via taskActions → taskStorage → SQLite
+    await createTask(data.title, 'one_off', {
+      dueDate: data.dueDate,
+      category: data.category,
+    });
+
+    // Increment refreshKey to force AllTasksScreen to remount and reload tasks
     setRefreshKey(prev => prev + 1);
+
+    // Navigate back to AllTasksScreen
     goBack();
   };
 
