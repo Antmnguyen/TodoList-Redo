@@ -34,6 +34,8 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useCategories, Category } from '../../features/categories';
+import { CategorySelector } from '../../components/categories/CategorySelector';
 
 // =============================================================================
 // DATE HELPERS
@@ -91,19 +93,8 @@ const formatDateDisplay = (date: Date): string => {
 export interface CreateTaskFormData {
   title: string;       // Task name entered by user
   dueDate: Date;       // Selected due date
-  category?: string;   // Selected task category (e.g. "Workout", "School")
+  categoryId?: string; // Selected category ID (foreign key to categories table)
 }
-
-/**
- * This array will be replaced by user-created categories from storage.
- * The component works fine with an empty array — the section just shows
- * the "no categories" message. These two entries are ONLY here for UI
- * testing and can be safely deleted with no code changes needed.
- */
-const PLACEHOLDER_CATEGORIES: string[] = [
-  'Workout',    // DELETE — UI preview only
-  'School',     // DELETE — UI preview only
-];
 
 /**
  * Props for CreateTaskScreen.
@@ -124,6 +115,13 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
   onCancel,
 }) => {
   // =========================================================================
+  // HOOKS
+  // =========================================================================
+
+  // Load categories from storage
+  const { categories, loading: categoriesLoading } = useCategories();
+
+  // =========================================================================
   // STATE
   // =========================================================================
 
@@ -140,14 +138,7 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Currently selected category — null means none selected
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Whether the category list is expanded (visible)
-  const [showCategories, setShowCategories] = useState(false);
-
-  // Category list — sourced from placeholder for now.
-  // TODO: Replace with categories loaded from storage via props or hook.
-  const categories = PLACEHOLDER_CATEGORIES;
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   // =========================================================================
   // HANDLERS
@@ -205,7 +196,7 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
     onSave?.({
       title: title.trim(),
       dueDate,
-      category: selectedCategory || undefined,
+      categoryId: selectedCategory?.id,
     });
   };
 
@@ -359,64 +350,15 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
         </View>
 
         {/* =============================================================== */}
-        {/* SECTION 3: TASK TYPE (expandable category list)                 */}
-        {/* Tapping the header toggles the list open/closed.               */}
-        {/* Categories come from the `categories` array — currently a      */}
-        {/* placeholder, will be replaced with user-created categories      */}
-        {/* from storage. Works correctly with an empty array.              */}
+        {/* SECTION 3: CATEGORY SELECTOR                                    */}
+        {/* Reusable component shared with CreatePermanentTaskScreen        */}
         {/* =============================================================== */}
-
-        {/* Expandable header — shows selected category if one is picked */}
-        <TouchableOpacity
-          style={styles.categoryHeader}
-          onPress={() => setShowCategories(!showCategories)}
-        >
-          <View>
-            <Text style={styles.sectionLabel}>TASK TYPE</Text>
-            {/* Show the selected category name, or "None" if nothing picked */}
-            <Text style={styles.categoryHeaderValue}>
-              {selectedCategory || 'None'}
-            </Text>
-          </View>
-          {/* Arrow indicator: points down when collapsed, up when expanded */}
-          <Text style={styles.expandIcon}>{showCategories ? '−' : '+'}</Text>
-        </TouchableOpacity>
-
-        {/* Expandable category list — only rendered when showCategories is true */}
-        {showCategories && (
-          <View style={styles.categoryListContainer}>
-            {categories.length === 0 ? (
-              /* Empty state — shown when user has no categories yet */
-              <Text style={styles.categoryEmptyText}>
-                No categories yet. Add categories to organize your tasks.
-              </Text>
-            ) : (
-              /* Render each category as a tappable row */
-              categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryItem,
-                    selectedCategory === cat && styles.categoryItemSelected,
-                  ]}
-                  onPress={() => {
-                    // Toggle: tap again to deselect
-                    setSelectedCategory(selectedCategory === cat ? null : cat);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.categoryItemText,
-                      selectedCategory === cat && styles.categoryItemTextSelected,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        )}
+        <CategorySelector
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          categories={categories}
+          loading={categoriesLoading}
+        />
 
         {/* Extra space at bottom so content isn't hidden behind keyboard */}
         <View style={styles.bottomSpacer} />
@@ -564,67 +506,6 @@ const styles = StyleSheet.create({
   iosDatePicker: {
     height: 150,
     marginTop: 8,
-  },
-
-  // ----- Expandable category header -----
-  // Tappable bar that toggles the category list open/closed
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 16,
-  },
-  // Shows the currently selected category (or "None")
-  categoryHeaderValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-    marginTop: 2,
-  },
-  // +/− icon on the right side of the header
-  expandIcon: {
-    fontSize: 20,
-    color: '#007AFF',
-    fontWeight: '300',
-  },
-
-  // ----- Category list (shown when expanded) -----
-  // White container holding the list of category rows
-  categoryListContainer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  // Individual category row — grey pill, tappable
-  categoryItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 8,
-  },
-  // Selected category — blue background
-  categoryItemSelected: {
-    backgroundColor: '#007AFF',
-  },
-  // Category label text — dark by default
-  categoryItemText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-  },
-  // Selected category text — white on blue
-  categoryItemTextSelected: {
-    color: '#fff',
-  },
-  // Shown when the categories array is empty
-  categoryEmptyText: {
-    fontSize: 14,
-    color: '#888',
-    paddingVertical: 12,
   },
 
   // ----- Bottom spacer -----

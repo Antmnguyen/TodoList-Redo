@@ -4,39 +4,82 @@
 // =============================================================================
 //
 // Screen that displays all tasks.
-// This is a pure display screen - navigation and FAB are handled by TasksStack.
 //
 // RESPONSIBILITIES:
 // - Display task list
 // - Handle task toggle (complete/uncomplete)
 // - Handle task deletion
+// - Handle task editing (via EditTaskModal popup)
 //
-// NOT RESPONSIBLE FOR (handled by TasksStack):
+// NOT RESPONSIBLE FOR (handled by MainNavigator):
 // - FloatingCreateTaskButton
 // - Navigation to other screens
-// - CreateTaskModal
+//
 // =============================================================================
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
+import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
 import { sortTasksByCompletion } from '../../core/utils/taskSorting';
+import { Task } from '../../core/types/task';
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export const AllTasksScreen: React.FC = () => {
+  // ---------------------------------------------------------------------------
   // Hook providing task data and operations
-  const { tasks, toggleTask, removeTask } = useTasks();
+  // Location: app/core/hooks/useTasks.ts
+  // ---------------------------------------------------------------------------
+  const { tasks, toggleTask, removeTask, editTask } = useTasks();
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Edit modal state
+  // ---------------------------------------------------------------------------
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+
+  // ---------------------------------------------------------------------------
   // Sort tasks: uncompleted first, completed last
-  // -------------------------------------------------------------------------
   // Uses sortTasksByCompletion from app/core/utils/taskSorting.ts
-  // Memoized to avoid re-sorting on every render (only when tasks change)
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const sortedTasks = useMemo(() => sortTasksByCompletion(tasks), [tasks]);
 
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+
+  // Called when user taps on a task (not the checkbox)
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setEditModalVisible(true);
+  };
+
+  // Called when user saves changes in edit modal
+  // Data flow: EditTaskModal → this handler → useTasks.editTask → taskActions.reassignTask
+  const handleSaveEdit = (taskId: string, updates: EditTaskData) => {
+    editTask(taskId, {
+      title: updates.title,
+      dueDate: updates.dueDate,
+    });
+    setEditModalVisible(false);
+    setEditingTask(null);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false);
+    setEditingTask(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>All Tasks</Text>
         <Text style={styles.subtitle}>
@@ -44,23 +87,48 @@ export const AllTasksScreen: React.FC = () => {
         </Text>
       </View>
 
+      {/* Task List */}
       <TaskList
         tasks={sortedTasks}
         onToggle={toggleTask}
         onDelete={removeTask}
+        onEdit={handleEditTask}
         emptyMessage="No tasks yet. Tap + to add one."
+      />
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        visible={editModalVisible}
+        task={editingTask}
+        onSave={handleSaveEdit}
+        onClose={handleCloseEdit}
       />
     </SafeAreaView>
   );
 };
 
+// =============================================================================
+// STYLES
+// =============================================================================
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   header: {
     padding: 20,
     paddingTop: 60,
     backgroundColor: '#007AFF',
   },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  subtitle: { fontSize: 16, color: '#fff', opacity: 0.8 },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.8,
+  },
 });

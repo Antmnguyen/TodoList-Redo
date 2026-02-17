@@ -7,6 +7,7 @@ import {
   completeTask,
   deleteTask,
   uncompleteTask,
+  reassignTask,
 } from '../domain/taskActions';
 
 export function useTasks() {
@@ -62,12 +63,34 @@ export function useTasks() {
     await deleteTask(task);
   }
 
+  /** EDIT / REASSIGN */
+  // -------------------------------------------------------------------------
+  // Updates task properties (title, dueDate, etc.) via reassignTask
+  // Location of reassignTask: app/core/domain/taskActions.ts
+  // For one_off tasks: merges updates and saves to storage
+  // For permanent tasks: delegates to reassignPermanentTask
+  // -------------------------------------------------------------------------
+  async function editTask(taskId: string, updates: Partial<Task>) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated = await reassignTask(task, updates);
+
+    // Update local state
+    setTasks(prev =>
+      prev.map(t => (t.id === taskId ? updated : t))
+    );
+
+    return updated;
+  }
+
   return {
     tasks,
     loading,
     addTask,
     toggleTask,
     removeTask,
+    editTask,
     reload: loadTasks,
   };
 }

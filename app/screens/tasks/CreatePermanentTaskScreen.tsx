@@ -39,6 +39,8 @@ import {
   Alert,
 } from 'react-native';
 import { createTask } from '../../core/domain/taskActions';
+import { useCategories, Category } from '../../features/categories';
+import { CategorySelector } from '../../components/categories/CategorySelector';
 
 // =============================================================================
 // TYPES
@@ -48,6 +50,7 @@ import { createTask } from '../../core/domain/taskActions';
 // This will be passed to the backend when saving
 export interface PermanentTaskFormData {
   templateTitle: string;
+  categoryId?: string;
   location?: string;
   autoRepeat?: {
     enabled: boolean;
@@ -72,12 +75,21 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
   onCancel,
 }) => {
   // =========================================================================
+  // HOOKS
+  // =========================================================================
+
+  // Load categories from storage
+  const { categories, loading: categoriesLoading } = useCategories();
+
+  // =========================================================================
   // FORM STATE
   // =========================================================================
 
   // Required fields
   const [templateTitle, setTemplateTitle] = useState('');
-  const [taskType, setTaskType] = useState('');
+
+  // Category selection (optional but recommended)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   // Optional fields
   const [location, setLocation] = useState('');
@@ -102,15 +114,10 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
       return;
     }
 
-    if (!taskType.trim()) {
-      Alert.alert('Required Field', 'Please enter a task type');
-      return;
-    }
-
     // Build form data object
-    const formData: PermanentTaskFormData & { taskType?: string } = {
+    const formData: PermanentTaskFormData = {
       templateTitle: templateTitle.trim(),
-      taskType: taskType.trim(),
+      categoryId: selectedCategory?.id,
     };
 
     // Add optional fields if provided
@@ -127,16 +134,15 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
 
     try {
       // Create the permanent task template via taskActions
-      // TODO: taskType is passed but not stored yet - needs storage restructuring
+      // TODO: Wire categoryId to permanent task storage in backend
       const newTemplate = await createTask(
         formData.templateTitle,
         'permanent',
         {
-          templateTitle: formData.templateTitle,
-          location: formData.location,
-          autoRepeat: formData.autoRepeat,
-          // TODO: Add taskType to PermanentTask type and storage
-          // taskType: formData.taskType,
+          //templateTitle: formData.templateTitle,
+          location: formData.location ? { lat: 0, lng: 0, name: formData.location } : undefined,
+          recurring: formData.autoRepeat,            
+          categoryId: formData.categoryId,
         }
       );
 
@@ -199,21 +205,15 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
         </View>
 
         {/* =============================================================== */}
-        {/* REQUIRED: Task Type */}
+        {/* CATEGORY SELECTOR */}
+        {/* Reusable component shared with CreateTaskScreen                 */}
         {/* =============================================================== */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Task Type *</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g., Exercise, Work, Personal, Health"
-            placeholderTextColor="#999"
-            value={taskType}
-            onChangeText={setTaskType}
-          />
-          <Text style={styles.helperText}>
-            Category of this task (will be used for organizing and stats)
-          </Text>
-        </View>
+        <CategorySelector
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          categories={categories}
+          loading={categoriesLoading}
+        />
 
         {/* =============================================================== */}
         {/* OPTIONAL: Location */}

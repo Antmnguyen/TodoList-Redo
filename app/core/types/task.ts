@@ -22,8 +22,10 @@ export interface Task {
   description?: string;
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
-  category?: string;
+  category?: string;      // Legacy - display name
+  categoryId?: string;    // Foreign key to categories table
   dueDate?: Date;
+  completedAt?: Date;     // When task was marked complete (for stats)
   startDate?: Date; // Hidden until start date
   subtasks?: SubTask[];
   recurring?: RecurringConfig;

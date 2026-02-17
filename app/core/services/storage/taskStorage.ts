@@ -38,6 +38,8 @@ export async function getAllTasks(): Promise<Task[]> {
     completed: number;
     created_at: number;
     due_date: number | null;
+    category_id: string | null;
+    completed_at: number | null;
   }>('SELECT * FROM tasks ORDER BY created_at DESC');
 
   // Map SQL rows to Task objects
@@ -47,6 +49,8 @@ export async function getAllTasks(): Promise<Task[]> {
     completed: row.completed === 1, // INTEGER → boolean
     createdAt: new Date(row.created_at),
     dueDate: row.due_date ? new Date(row.due_date) : undefined,
+    categoryId: row.category_id || undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
   }));
 }
 
@@ -67,9 +71,17 @@ export async function getAllTasks(): Promise<Task[]> {
 export async function saveTask(task: Task): Promise<void> {
   // Use runSync for INSERT/UPDATE/DELETE
   db.runSync(
-    `INSERT OR REPLACE INTO tasks (id, title, completed, created_at, due_date)
-     VALUES (?, ?, ?, ?, ?)`,
-    [task.id, task.title, task.completed ? 1 : 0, task.createdAt.getTime(), task.dueDate ? task.dueDate.getTime() : null]
+    `INSERT OR REPLACE INTO tasks (id, title, completed, created_at, due_date, category_id, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      task.id,
+      task.title,
+      task.completed ? 1 : 0,
+      task.createdAt.getTime(),
+      task.dueDate ? task.dueDate.getTime() : null,
+      task.categoryId || null,
+      task.completedAt ? task.completedAt.getTime() : null,
+    ]
   );
 }
 

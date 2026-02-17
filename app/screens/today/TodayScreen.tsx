@@ -16,12 +16,14 @@
 //
 // =============================================================================
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
+import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
 import { filterTasksDueToday } from '../../core/utils/taskFilters';
 import { sortTasksByCompletion } from '../../core/utils/taskSorting';
+import { Task } from '../../core/types/task';
 
 // =============================================================================
 // COMPONENT
@@ -32,21 +34,23 @@ export const TodayScreen: React.FC = () => {
   // Hook providing task data and operations
   // Location: app/core/hooks/useTasks.ts
   // ---------------------------------------------------------------------------
-  const { tasks, toggleTask, removeTask } = useTasks();
+  const { tasks, toggleTask, removeTask, editTask } = useTasks();
+
+  // ---------------------------------------------------------------------------
+  // Edit modal state
+  // ---------------------------------------------------------------------------
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Filter: Only tasks due today
-  // ---------------------------------------------------------------------------
   // Uses filterTasksDueToday from app/core/utils/taskFilters.ts
-  // Returns tasks where dueDate >= start of today AND dueDate < start of tomorrow
   // ---------------------------------------------------------------------------
   const todayTasks = useMemo(() => filterTasksDueToday(tasks), [tasks]);
 
   // ---------------------------------------------------------------------------
   // Sort: Uncompleted first, completed last
-  // ---------------------------------------------------------------------------
   // Uses sortTasksByCompletion from app/core/utils/taskSorting.ts
-  // Memoized to avoid re-sorting on every render
   // ---------------------------------------------------------------------------
   const sortedTasks = useMemo(() => sortTasksByCompletion(todayTasks), [todayTasks]);
 
@@ -55,6 +59,35 @@ export const TodayScreen: React.FC = () => {
   // ---------------------------------------------------------------------------
   const activeCount = todayTasks.filter(t => !t.completed).length;
 
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+
+  // Called when user taps on a task (not the checkbox)
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setEditModalVisible(true);
+  };
+
+  // Called when user saves changes in edit modal
+  // Data flow: EditTaskModal → this handler → useTasks.editTask → taskActions.reassignTask
+  const handleSaveEdit = (taskId: string, updates: EditTaskData) => {
+    editTask(taskId, {
+      title: updates.title,
+      dueDate: updates.dueDate,
+    });
+    setEditModalVisible(false);
+    setEditingTask(null);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false);
+    setEditingTask(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -70,7 +103,16 @@ export const TodayScreen: React.FC = () => {
         tasks={sortedTasks}
         onToggle={toggleTask}
         onDelete={removeTask}
+        onEdit={handleEditTask}
         emptyMessage="No tasks due today!"
+      />
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        visible={editModalVisible}
+        task={editingTask}
+        onSave={handleSaveEdit}
+        onClose={handleCloseEdit}
       />
     </SafeAreaView>
   );

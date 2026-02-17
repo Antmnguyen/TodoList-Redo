@@ -97,7 +97,7 @@ export const MainNavigator: React.FC = () => {
   const handleCreateTaskSave = async (data: CreateTaskFormData) => {
     await createTask(data.title, 'one_off', {
       dueDate: data.dueDate,
-      category: data.category,
+      categoryId: data.categoryId,
     });
     setRefreshKey(prev => prev + 1);
     goBack();

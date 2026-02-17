@@ -70,7 +70,10 @@ export async function completeTask(task: Task): Promise<Task> {
     
     case 'one_off':
     default:
-      const completed = TaskFactory.complete(task);
+      const completed = {
+        ...TaskFactory.complete(task),
+        completedAt: new Date(), // Track completion time for stats
+      };
       await saveTask(completed);
       return completed;
   }
@@ -106,22 +109,39 @@ export async function deleteTask(task: Task): Promise<void> {
 /**
  * REASSIGN TASK
  * -------------
- * Universal entry point for changing task due date or other properties.
+ * Universal entry point for editing task properties (title, dueDate, etc.)
  * Routes to appropriate handler based on task.kind.
+ *
+ * DATA FLOW:
+ *   UI (EditTaskModal) → useTasks.editTask() → THIS FUNCTION → saveTask()
+ *
+ * SUPPORTED UPDATES:
+ *   - title: string       → Updates task name
+ *   - dueDate: Date       → Updates due date
+ *   - category: string    → Updates category (when schema supports it)
+ *   - Any other Task field
+ *
+ * STORAGE:
+ *   saveTask() uses INSERT OR REPLACE, so all fields are written to DB
+ *   Location: app/core/services/storage/taskStorage.ts
  */
 export async function reassignTask(task: Task, updates: Partial<Task>): Promise<Task> {
   switch (task.kind) {
     case 'permanent':
       return await reassignPermanentTask(task, updates);
-    
+
     case 'preset':
       // Future: return await reassignPresetTask(task, updates);
       throw new Error('Preset task reassignment not yet implemented');
-    
+
     case 'one_off':
     default:
+      // Merge updates into existing task
       const updated = { ...task, ...updates };
+
+      // Persist to database (INSERT OR REPLACE writes all fields including title, due_date)
       await saveTask(updated);
+
       return updated;
   }
 }
@@ -188,7 +208,10 @@ export async function uncompleteTask(task: Task): Promise<Task> {
     
     case 'one_off':
     default:
-      const uncompleted = TaskFactory.uncomplete(task);
+      const uncompleted = {
+        ...TaskFactory.uncomplete(task),
+        completedAt: undefined, // Clear completion time
+      };
       await saveTask(uncompleted);
       return uncompleted;
   }
