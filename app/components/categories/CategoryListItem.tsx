@@ -27,6 +27,7 @@ import { Category } from '../../features/categories';
 export interface CategoryListItemProps {
   category: Category;
   taskCount: number;
+  onPress: (category: Category) => void;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
 }
@@ -38,6 +39,7 @@ export interface CategoryListItemProps {
 export const CategoryListItem: React.FC<CategoryListItemProps> = ({
   category,
   taskCount,
+  onPress,
   onEdit,
   onDelete,
 }) => {
@@ -64,21 +66,25 @@ export const CategoryListItem: React.FC<CategoryListItemProps> = ({
   // ---------------------------------------------------------------------------
   return (
     <View style={styles.row}>
-      {/* Color dot */}
-      <View
-        style={[
-          styles.colorDot,
-          { backgroundColor: category.color || '#ccc' },
-        ]}
-      />
-
-      {/* Name + task count */}
-      <View style={styles.info}>
-        <Text style={styles.name}>{category.name}</Text>
-        <Text style={styles.count}>
-          {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-        </Text>
-      </View>
+      {/* Tappable left side: color dot + name + count */}
+      <TouchableOpacity
+        style={styles.rowBody}
+        onPress={() => onPress(category)}
+        activeOpacity={0.6}
+      >
+        <View
+          style={[
+            styles.colorDot,
+            { backgroundColor: category.color || '#ccc' },
+          ]}
+        />
+        <View style={styles.info}>
+          <Text style={styles.name}>{category.name}</Text>
+          <Text style={styles.count}>
+            {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Actions */}
       <TouchableOpacity
@@ -109,10 +115,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingRight: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  rowBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   colorDot: {
     width: 16,
@@ -122,6 +134,7 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
+    flexShrink: 1,
   },
   name: {
     fontSize: 16,

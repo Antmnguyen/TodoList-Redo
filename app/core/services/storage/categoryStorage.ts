@@ -273,6 +273,23 @@ export async function getTaskCountForCategory(categoryId: string): Promise<numbe
   return row?.count || 0;
 }
 
+/**
+ * Get all tasks belonging to a category
+ *
+ * Active tasks first, then completed, both sorted newest first.
+ *
+ * @param categoryId - The category ID
+ * @returns Array of { id, title, completed } for each task
+ */
+export function getTasksForCategory(categoryId: string): { id: string; title: string; completed: boolean }[] {
+  return db.getAllSync<{ id: string; title: string; completed: number }>(
+    `SELECT id, title, completed FROM tasks
+     WHERE category_id = ?
+     ORDER BY completed ASC, created_at DESC`,
+    [categoryId]
+  ).map(row => ({ id: row.id, title: row.title, completed: row.completed === 1 }));
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================

@@ -23,11 +23,12 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 
 import { useCategories } from '../../features/categories';
 import { Category } from '../../features/categories';
-import { getTaskCountForCategory } from '../../core/services/storage/categoryStorage';
+import { getTaskCountForCategory, getTasksForCategory } from '../../core/services/storage/categoryStorage';
 import { CategoryListItem } from '../../components/categories/CategoryListItem';
 import { AddCategoryModal } from '../../components/categories/AddCategoryModal';
 
@@ -71,7 +72,22 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
   }
 
   // ---------------------------------------------------------------------------
-  // Modal state
+  // Task list modal state
+  // ---------------------------------------------------------------------------
+  type TaskRow = { id: string; title: string; completed: boolean };
+  const [taskListCategory, setTaskListCategory] = useState<Category | null>(null);
+  const [taskListItems, setTaskListItems] = useState<TaskRow[]>([]);
+
+  const openTaskList = (category: Category) => {
+    const tasks = getTasksForCategory(category.id);
+    setTaskListItems(tasks);
+    setTaskListCategory(category);
+  };
+
+  const closeTaskList = () => setTaskListCategory(null);
+
+  // ---------------------------------------------------------------------------
+  // Add / Edit modal state
   // ---------------------------------------------------------------------------
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -142,6 +158,7 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
             <CategoryListItem
               category={item}
               taskCount={taskCounts[item.id] ?? 0}
+              onPress={openTaskList}
               onEdit={openEditModal}
               onDelete={handleDelete}
             />
@@ -155,6 +172,45 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
           contentContainerStyle={categories.length === 0 ? styles.emptyContainer : null}
         />
       )}
+
+      {/* Task list modal */}
+      <Modal
+        visible={taskListCategory !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={closeTaskList}
+      >
+        <View style={styles.taskModalOverlay}>
+          <View style={styles.taskModalSheet}>
+            {/* Modal header */}
+            <View style={styles.taskModalHeader}>
+              <View style={[styles.taskModalDot, { backgroundColor: taskListCategory?.color || '#ccc' }]} />
+              <Text style={styles.taskModalTitle}>{taskListCategory?.name}</Text>
+              <TouchableOpacity onPress={closeTaskList} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.taskModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Task list */}
+            {taskListItems.length === 0 ? (
+              <Text style={styles.taskModalEmpty}>No tasks in this category.</Text>
+            ) : (
+              <FlatList
+                data={taskListItems}
+                keyExtractor={(t) => t.id}
+                renderItem={({ item }) => (
+                  <View style={styles.taskRow}>
+                    <Text style={styles.taskDot}>{item.completed ? '✓' : '○'}</Text>
+                    <Text style={[styles.taskTitle, item.completed && styles.taskTitleDone]}>
+                      {item.title}
+                    </Text>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Add / Edit modal */}
       <AddCategoryModal
@@ -229,5 +285,70 @@ const styles = StyleSheet.create({
   emptySubText: {
     fontSize: 14,
     color: '#888',
+  },
+
+  // Task list modal
+  taskModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  taskModalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  taskModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  taskModalDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: 10,
+  },
+  taskModalTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  taskModalClose: {
+    fontSize: 18,
+    color: '#aaa',
+  },
+  taskModalEmpty: {
+    fontSize: 15,
+    color: '#888',
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  taskDot: {
+    fontSize: 16,
+    color: '#888',
+    marginRight: 12,
+    width: 20,
+    textAlign: 'center',
+  },
+  taskTitle: {
+    fontSize: 15,
+    color: '#1a1a1a',
+    flex: 1,
+  },
+  taskTitleDone: {
+    color: '#aaa',
+    textDecorationLine: 'line-through',
   },
 });
