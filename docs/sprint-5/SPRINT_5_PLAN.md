@@ -189,9 +189,113 @@ const visibleTasks = tasks.filter(task => {
 - [ ] Filter by date range
 - [ ] Filter by completion status
 - [ ] Sort options (date, name, category)
-- [ ] View archived/completed tasks
 
 **Placeholder for now — details TBD**
+
+---
+
+### 2.4 Task Archival System
+
+**Goal:** Automatically sweep completed tasks out of the main task list into a lightweight archive, and surface that history in Browse.
+
+**How it differs from 2.1 (auto-hide):**
+- 2.1 just filters the UI — data stays in `tasks`
+- 2.4 physically removes the row from `tasks` and writes a compressed record to a separate `task_archive` table
+
+---
+
+#### Archive Data Format
+
+Archived records store only what's needed for history — full task objects are not kept:
+
+```typescript
+interface ArchivedTask {
+  id: string;           // original task id
+  title: string;        // task name
+  categoryId?: string;  // for grouping in history
+  categoryName?: string; // denormalized — category may be deleted later
+  completedAt: number;  // timestamp (ms) — primary sort key
+  archivedAt: number;   // when the archival job ran
+  wasRecurring: boolean; // true if this was a permanent task instance
+}
+```
+
+#### Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS task_archive (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category_id TEXT,
+  category_name TEXT,
+  completed_at INTEGER NOT NULL,
+  archived_at INTEGER NOT NULL,
+  was_recurring INTEGER NOT NULL DEFAULT 0
+);
+```
+
+#### Archival Rules
+
+- **What gets archived:** all completed tasks — both one-off tasks and permanent task instances. Permanent task instances are still deleted from `tasks` and `template_instances` as before, and `template_stats` still tracks their aggregate stats (streaks, rates, etc.) — but a compressed record is also written to `task_archive` so individual completions appear in Task History. `was_recurring` is set to `true` for these rows.
+- **What is preserved:** `id`, `title`, `category_id`, `category_name` (denormalized snapshot), `completed_at`, `was_recurring`
+- **What is discarded:** `due_date`, `created_at`, `completed` flag (always true in archive)
+- **Trigger:** Automatic archival job runs on a configurable schedule (default: daily, exact interval TBD — options are every X hours or once at midnight)
+- **Manual option:** User can also trigger archival from Settings (future)
+
+#### Archival Job
+
+```typescript
+// services/archivalService.ts
+async function archiveCompletedTasks(): Promise<number> {
+  // 1. Fetch all completed one-off tasks from tasks table
+  // 2. Write compressed ArchivedTask rows to task_archive
+  // 3. Delete the original rows from tasks
+  // 4. Return count of archived tasks
+}
+```
+
+The job runs via a lightweight interval (e.g. `setInterval` on app resume, or a background task via `expo-background-fetch` if available). Exact scheduling TBD.
+
+#### Browse > Task History UI
+
+A new "Task History" entry in the Browse feature list opens a `TaskHistoryScreen`:
+
+```
+BrowseScreen
+  └── Feature List
+        ├── "Categories"     → CategoryManagementScreen  (done, Sprint 3)
+        ├── "Task History"   → TaskHistoryScreen          (this feature)
+        └── ...
+
+TaskHistoryScreen
+  ├── Header: "Task History"
+  ├── Time filter bar: [All | Today | This Week | This Month | This Year]
+  ├── Grouped list (by day):
+  │     ┌─────────────────────────────────┐
+  │     │  February 18                    │
+  │     │  ✓ Buy groceries    [Work]      │
+  │     │  ✓ Morning run      [Health]    │
+  │     └─────────────────────────────────┘
+  └── Empty state: "No archived tasks yet"
+```
+
+---
+
+**Requirements:**
+- [ ] `task_archive` table created in schema
+- [ ] `archivalService.ts` — `archiveCompletedTasks()` function
+- [ ] Archival job scheduled on app start (configurable interval, default daily)
+- [ ] Permanent task instances: write compressed record to `task_archive` (wasRecurring: true), then delete from `tasks` as normal — template_stats logic unchanged
+- [ ] `TaskHistoryScreen` in Browse with time filter (All / Today / Week / Month / Year)
+- [ ] History grouped by day, showing title + category name
+- [ ] `BrowseScreen` feature list updated with "Task History" entry
+
+**Files:**
+- [ ] `app/core/services/storage/schema/archive.ts` — `task_archive` table
+- [ ] `app/core/services/archivalService.ts` — archival logic + scheduling
+- [ ] `app/screens/browse/TaskHistoryScreen.tsx` — history UI
+- [ ] `app/screens/browse/BrowseScreen.tsx` — add Task History entry
+- [ ] `app/core/services/storage/archiveStorage.ts` — read/write archive table
 
 ---
 
@@ -244,9 +348,18 @@ export const slideInRight = SlideInRight.duration(250);
 ## Part 4: Task List & Checklist
 
 ### Completed Tasks Cleanup
-- [ ] Implement 24-hour auto-hide for completed tasks
+- [ ] Implement 24-hour auto-hide for completed tasks (2.1)
 - [ ] Add "Show Completed" toggle option
-- [ ] Ensure completed tasks remain in database (just hidden from UI)
+- [ ] Ensure completed tasks remain in database until archival job runs
+
+### Task Archival (2.4)
+- [ ] Create `task_archive` schema and migration
+- [ ] Implement `archiveCompletedTasks()` in `archivalService.ts`
+- [ ] Schedule archival job on app start (daily / configurable)
+- [ ] Permanent task instances: archive to `task_archive` (wasRecurring: true), then delete from tasks — all existing template_stats logic unchanged
+- [ ] Build `TaskHistoryScreen` with time filter tabs
+- [ ] Group history by day, show title + category
+- [ ] Add "Task History" entry to BrowseScreen feature list
 
 ### Template Management
 - [ ] Add menu (⋮) to template items in UsePermanentTaskScreen
@@ -289,6 +402,18 @@ app/
 ├── utils/
 │   └── animations.ts         # Reusable animation configs
 │
+├── core/
+│   └── services/
+│       ├── archivalService.ts            # Archival job + scheduling (2.4)
+│       └── storage/
+│           ├── archiveStorage.ts         # Read/write task_archive table (2.4)
+│           └── schema/
+│               └── archive.ts            # task_archive schema (2.4)
+│
+├── screens/
+│   └── browse/
+│       └── TaskHistoryScreen.tsx         # Browse > Task History (2.4)
+│
 ├── components/
 │   ├── ui/
 │   │   ├── ThemedText.tsx    # Text with theme colors
@@ -304,20 +429,25 @@ app/
 
 ## Priority Order
 
-1. **High:** Completed tasks auto-hide (quick win)
-2. **High:** Template edit/delete (user need)
-3. **Medium:** Basic animations (completion, delete)
-4. **Medium:** Theme system setup
-5. **Low:** Full dark mode implementation
-6. **Low:** Advanced animations
-7. **TBD:** Browse screen features
+1. **High:** Task archival system — schema, service, scheduled job (2.4)
+2. **High:** Browse > Task History screen (2.4)
+3. **High:** Template edit/delete (user need, moved from Sprint 3)
+4. **Medium:** Completed tasks auto-hide UI filter (2.1)
+5. **Medium:** Basic animations (completion, delete)
+6. **Medium:** Theme system setup
+7. **Low:** Full dark mode implementation
+8. **Low:** Advanced animations
+9. **TBD:** Browse search/filter features (2.3)
 
 ---
 
 ## Success Criteria
 
 - [ ] App looks modern and professional
-- [ ] Completed tasks don't clutter the list
+- [ ] Completed tasks are automatically archived and removed from the main task list
+- [ ] Archived tasks are viewable in Browse > Task History, filterable by time range
+- [ ] Completed permanent task instances appear in Task History (wasRecurring: true), deleted from tasks table as normal, template_stats unaffected
+- [ ] Archive stores only compressed data (title, category, completedAt) — not full task objects
 - [ ] Users can manage permanent task templates
 - [ ] Animations feel smooth and purposeful
 - [ ] Consistent spacing and typography
