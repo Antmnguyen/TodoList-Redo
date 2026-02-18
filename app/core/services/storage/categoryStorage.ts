@@ -265,29 +265,66 @@ export async function getAllCategoryStats(): Promise<CategoryStats[]> {
  * @param categoryId - The category ID
  * @returns Task count
  */
+/**
+ * Get the number of tasks assigned to a category.
+ *
+ * Counting rules (3.7):
+ *   - One-off tasks: each task row that is NOT a permanent instance counts as 1.
+ *     The count rises when the task is assigned and falls when it is deleted.
+ *   - Permanent templates: each template counts as 1 regardless of how many
+ *     times it has been used. Creating or completing instances has no effect.
+ *
+ * @param categoryId - The category ID
+ * @returns Task count
+ */
 export async function getTaskCountForCategory(categoryId: string): Promise<number> {
-  const row = db.getFirstSync<CountRow>(
-    'SELECT COUNT(*) as count FROM tasks WHERE category_id = ?',
+  // One-off tasks: rows in tasks that have no entry in template_instances
+  const oneOffRow = db.getFirstSync<CountRow>(
+    `SELECT COUNT(*) as count FROM tasks
+     WHERE category_id = ?
+       AND id NOT IN (SELECT instanceId FROM template_instances)`,
     [categoryId]
   );
-  return row?.count || 0;
+
+  // Permanent templates: 1 per template, never per instance
+  const templateRow = db.getFirstSync<CountRow>(
+    `SELECT COUNT(*) as count FROM templates WHERE category_id = ?`,
+    [categoryId]
+  );
+
+  return (oneOffRow?.count || 0) + (templateRow?.count || 0);
 }
 
 /**
- * Get all tasks belonging to a category
+ * Get all tasks belonging to a category.
  *
- * Active tasks first, then completed, both sorted newest first.
+ * Returns one row per one-off task and one row per permanent template
+ * (never one row per instance). Templates show completed: false.
+ * Active entries are listed before completed ones.
  *
  * @param categoryId - The category ID
- * @returns Array of { id, title, completed } for each task
+ * @returns Array of { id, title, completed } for each entry
  */
 export function getTasksForCategory(categoryId: string): { id: string; title: string; completed: boolean }[] {
-  return db.getAllSync<{ id: string; title: string; completed: number }>(
+  // Permanent templates (one entry per template regardless of instance count)
+  const templates = db.getAllSync<{ permanentId: string; templateTitle: string }>(
+    `SELECT permanentId, templateTitle FROM templates
+     WHERE category_id = ?
+     ORDER BY createdAt DESC`,
+    [categoryId]
+  ).map(row => ({ id: row.permanentId, title: row.templateTitle, completed: false }));
+
+  // One-off tasks: tasks that have no corresponding template_instances row
+  const oneOffTasks = db.getAllSync<{ id: string; title: string; completed: number }>(
     `SELECT id, title, completed FROM tasks
      WHERE category_id = ?
+       AND id NOT IN (SELECT instanceId FROM template_instances)
      ORDER BY completed ASC, created_at DESC`,
     [categoryId]
   ).map(row => ({ id: row.id, title: row.title, completed: row.completed === 1 }));
+
+  // Templates first, then one-off tasks
+  return [...templates, ...oneOffTasks];
 }
 
 // =============================================================================

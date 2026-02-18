@@ -1,6 +1,6 @@
 # Sprint 3 Plan: Core Task Features
 
-**Status:** In Progress (one task remaining)
+**Status:** Complete
 **Goal:** Complete core task management features (editing, categories, permanent tasks)
 
 ---
@@ -122,18 +122,19 @@ Wire categoryId to permanent task storage and ensure completion updates stats.
 
 ### 3.6 Manage Categories (Browse Section)
 **Priority:** Medium
-**Status:** [ ] Not Started
+**Status:** [x] Complete
 
 Add category management UI to Browse screen with full CRUD operations.
 
 **Requirements:**
-- [ ] Browse screen shows list of feature options (Categories first)
-- [ ] Tap "Categories" to open category management view
-- [ ] View all categories with color indicators
-- [ ] Create new category (name, color picker)
-- [ ] Edit existing category (name, color)
-- [ ] Delete category (with confirmation)
-- [ ] Show task count per category
+- [x] Browse screen shows list of feature options (Categories first)
+- [x] Tap "Categories" to open category management view
+- [x] View all categories with color indicators
+- [x] Create new category (name, color picker)
+- [x] Edit existing category (name, color)
+- [x] Delete category (with confirmation)
+- [x] Show task count per category
+- [x] Tap category row to view list of task names in that category
 
 **UI Flow:**
 ```
@@ -144,28 +145,53 @@ BrowseScreen
         └── "Settings" → (future)
 
 CategoryManagementScreen
-  ├── Header: "Manage Categories" + "Add" button
+  ├── Header: "Categories" + "Add" button
   ├── List of categories (color dot + name + task count)
-  │     └── Tap → Edit modal
-  │     └── Swipe/Delete button → Confirm delete
-  └── Add Category Modal (name input + color picker)
+  │     └── Tap row → Task list modal (task names, completed state)
+  │     └── Edit button → AddCategoryModal (edit mode)
+  │     └── Delete button → Confirm delete
+  └── AddCategoryModal (name input + color picker, create & edit)
 ```
 
 **Files:**
-- [ ] `app/screens/browse/BrowseScreen.tsx` - update with feature list
-- [ ] `app/screens/browse/CategoryManagementScreen.tsx` - new screen
-- [ ] `app/components/categories/CategoryListItem.tsx` - list item with edit/delete
-- [ ] `app/components/categories/AddCategoryModal.tsx` - create/edit modal
+- [x] `app/screens/browse/BrowseScreen.tsx` - feature list, local sub-screen state
+- [x] `app/screens/browse/CategoryManagementScreen.tsx` - new screen
+- [x] `app/components/categories/CategoryListItem.tsx` - tappable row with edit/delete
+- [x] `app/components/categories/AddCategoryModal.tsx` - create/edit modal
+- [x] `app/core/services/storage/categoryStorage.ts` - added getTasksForCategory()
 
 ---
 
-### 3.7 Edit Permanent Task Templates
+### 3.7 Fix Category Task Count Rules
+**Priority:** Medium
+**Status:** [x] Complete
+
+Correct how task counts are calculated per category so they reflect meaningful numbers.
+
+**Rules:**
+- **Permanent task templates:** count as **1** per template regardless of how many times the template has been used. Using or completing a permanent task instance does NOT change the count.
+- **One-off tasks:** count increases by **+1** when the task is assigned to the category, decreases by **-1** when the task is deleted. Completing the task does NOT change the count.
+
+**Why this matters:**
+The current `getTaskCountForCategory` query counts all rows in `tasks WHERE category_id = ?`. This is correct for one-off tasks but does not account for permanent task templates, which generate multiple instance rows per usage. The fix requires querying templates and tasks separately and combining the counts correctly.
+
+**Requirements:**
+- [x] `getTaskCountForCategory` returns 1 per permanent template (not per instance) assigned to the category
+- [x] `getTaskCountForCategory` returns 1 per one-off task assigned to the category
+- [x] Count decreases when a one-off task is deleted (already handled — row is deleted)
+- [x] Count does NOT change when a permanent task instance is created or completed
+- [x] Category task list modal (3.6) shows template name once, not per instance
+
+**Files updated:**
+- [x] `app/core/services/storage/categoryStorage.ts` - fixed getTaskCountForCategory: counts one-off tasks (tasks NOT IN template_instances) + templates (1 per template row)
+- [x] `app/core/services/storage/categoryStorage.ts` - fixed getTasksForCategory: returns templates table rows + one-off task rows separately
+
+---
+
+### 3.8 Edit Permanent Task Templates
 **Status:** Moved to Sprint 5
 
-### 3.8 Delete Permanent Task Templates
-**Status:** Moved to Sprint 5
-
-### 3.5 Delete Permanent Task Templates
+### 3.9 Delete Permanent Task Templates
 **Status:** Moved to Sprint 5
 
 ---
@@ -180,9 +206,10 @@ CategoryManagementScreen
 ### Medium Priority
 - [x] 3.3 User-created categories (feature module)
 - [x] 3.4 CategorySelector component (reusable UI)
-- [ ] 3.6 Manage Categories (Browse section CRUD)
-- [→] 3.7 Edit permanent task templates (moved to Sprint 5)
-- [→] 3.8 Delete permanent task templates (moved to Sprint 5)
+- [x] 3.6 Manage Categories (Browse section CRUD)
+- [x] 3.7 Fix category task count rules (permanent vs one-off)
+- [→] 3.8 Edit permanent task templates (moved to Sprint 5)
+- [→] 3.9 Delete permanent task templates (moved to Sprint 5)
 
 ---
 
@@ -203,10 +230,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- Tasks table additions
 ALTER TABLE tasks ADD COLUMN category_id TEXT;
 ALTER TABLE tasks ADD COLUMN completed_at INTEGER;
-```
 
-### Remaining (3.5)
-```sql
 -- Permanent templates table
 ALTER TABLE permanent_templates ADD COLUMN category_id TEXT;
 
@@ -226,9 +250,12 @@ ALTER TABLE permanent_instances ADD COLUMN category_id TEXT;
 - [x] CategorySelector is reusable across screens
 - [x] Permanent task categoryId saved to database
 - [x] Permanent task completion updates category stats
-- [ ] Users can create new categories from Browse
-- [ ] Users can edit category name/color from Browse
-- [ ] Users can delete categories from Browse
+- [x] Users can create new categories from Browse
+- [x] Users can edit category name/color from Browse
+- [x] Users can delete categories from Browse
+- [x] Tapping a category shows its task names
+- [x] Category count = 1 per permanent template (not per instance)
+- [x] Category count +1 on one-off task assigned, -1 on deleted
 - [ ] No data loss or corruption
 
 ---
