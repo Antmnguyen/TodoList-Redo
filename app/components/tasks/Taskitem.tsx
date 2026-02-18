@@ -1,20 +1,30 @@
 // app/components/tasks/TaskItem.tsx
-// Simple task card component
+// =============================================================================
+// TASK ITEM COMPONENT
+// =============================================================================
+//
+// Single task card with three interaction zones:
+//   1. Checkbox (left)  → Toggle completion
+//   2. Task body (center) → Edit task (opens modal)
+//   3. Delete button (right) → Delete task
+//
+// =============================================================================
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Task } from '../../core/types/tasks';
+import { Task } from '../../core/types/task';
 
 type TaskItemProps = {
   task: Task;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit?: (task: Task) => void;  // Optional: opens edit modal
 };
 
-export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete }) => {
+export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, onEdit }) => {
   return (
     <View style={styles.container}>
-      {/* Checkbox */}
+      {/* Checkbox - tap to toggle completion */}
       <TouchableOpacity
         style={styles.checkbox}
         onPress={() => onToggle(task.id)}
@@ -27,13 +37,28 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete }) 
         </View>
       </TouchableOpacity>
 
-      {/* Task Title */}
-      <Text style={[
-        styles.title,
-        task.completed && styles.titleCompleted
-      ]}>
-        {task.title}
-      </Text>
+      {/* Task Body - tap to edit */}
+      <TouchableOpacity
+        style={styles.body}
+        onPress={() => onEdit?.(task)}
+        activeOpacity={onEdit ? 0.7 : 1}
+      >
+        <Text style={[
+          styles.title,
+          task.completed && styles.titleCompleted
+        ]}>
+          {task.title}
+        </Text>
+        {/* Show due date if exists */}
+        {task.dueDate && (
+          <Text style={[
+            styles.dueDate,
+            task.completed && styles.dueDateCompleted
+          ]}>
+            {formatDueDate(task.dueDate)}
+          </Text>
+        )}
+      </TouchableOpacity>
 
       {/* Delete Button */}
       <TouchableOpacity
@@ -45,6 +70,39 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete }) 
     </View>
   );
 };
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+function formatDueDate(date: Date): string {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Reset time for comparison
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+
+  if (dateOnly.getTime() === todayOnly.getTime()) {
+    return 'Today';
+  }
+  if (dateOnly.getTime() === tomorrowOnly.getTime()) {
+    return 'Tomorrow';
+  }
+
+  // Check if overdue
+  if (dateOnly < todayOnly) {
+    return `Overdue: ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  }
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -80,13 +138,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  title: {
+  body: {
     flex: 1,
+  },
+  title: {
     fontSize: 16,
     color: '#000',
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  dueDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  dueDateCompleted: {
     color: '#999',
   },
   deleteButton: {

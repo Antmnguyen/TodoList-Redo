@@ -1,6 +1,7 @@
 // app/core/services/storage/schema/index.ts
 import { initializeCoreSchema } from './core';
-
+import { createPermanentTasksSchema } from './permanentTask';
+import { initializeCategoriesSchema } from './categories';
 /**
  * Initialize all database schemas.
  * Currently: Sprint 2 only has core tasks table active.
@@ -9,6 +10,10 @@ import { initializeCoreSchema } from './core';
 export function initializeAllSchemas(): void {
   try {
     initializeCoreSchema();
+    // Permanent tasks schema
+    createPermanentTasksSchema();
+    // Categories schema (with default seeding)
+    initializeCategoriesSchema();
     console.log('✅ All active schemas initialized');
   } catch (error) {
     console.error('❌ Schema initialization failed:', error);

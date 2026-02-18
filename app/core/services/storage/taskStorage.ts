@@ -15,7 +15,7 @@
  */
 
 import { db } from './database';
-import { Task } from '../../types/tasks';
+import { Task } from '../../types/task';
 
 
 /**
@@ -37,6 +37,9 @@ export async function getAllTasks(): Promise<Task[]> {
     title: string;
     completed: number;
     created_at: number;
+    due_date: number | null;
+    category_id: string | null;
+    completed_at: number | null;
   }>('SELECT * FROM tasks ORDER BY created_at DESC');
 
   // Map SQL rows to Task objects
@@ -45,6 +48,9 @@ export async function getAllTasks(): Promise<Task[]> {
     title: row.title,
     completed: row.completed === 1, // INTEGER → boolean
     createdAt: new Date(row.created_at),
+    dueDate: row.due_date ? new Date(row.due_date) : undefined,
+    categoryId: row.category_id || undefined,
+    completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
   }));
 }
 
@@ -65,10 +71,44 @@ export async function getAllTasks(): Promise<Task[]> {
 export async function saveTask(task: Task): Promise<void> {
   // Use runSync for INSERT/UPDATE/DELETE
   db.runSync(
-    `INSERT OR REPLACE INTO tasks (id, title, completed, created_at)
-     VALUES (?, ?, ?, ?)`,
-    [task.id, task.title, task.completed ? 1 : 0, task.createdAt.getTime()]
+    `INSERT OR REPLACE INTO tasks (id, title, completed, created_at, due_date, category_id, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      task.id,
+      task.title,
+      task.completed ? 1 : 0,
+      task.createdAt.getTime(),
+      task.dueDate ? task.dueDate.getTime() : null,
+      task.categoryId || null,
+      task.completedAt ? task.completedAt.getTime() : null,
+    ]
   );
+}
+
+/**
+ * Update the due date of an existing task.
+ * Pass null to clear the due date.
+ */
+export async function updateTaskDueDate(taskId: string, dueDate: Date | null): Promise<void> {
+  db.runSync(
+    `UPDATE tasks SET due_date = ? WHERE id = ?`,
+    [dueDate ? dueDate.getTime() : null, taskId]
+  );
+}
+
+/**
+ * Read the due date of a single task.
+ * Returns null if the task has no due date or doesn't exist.
+ */
+export async function getTaskDueDate(taskId: string): Promise<Date | null> {
+  const rows = db.getAllSync<{ due_date: number | null }>(
+    `SELECT due_date FROM tasks WHERE id = ?`,
+    [taskId]
+  );
+  if (rows.length === 0 || rows[0].due_date === null) {
+    return null;
+  }
+  return new Date(rows[0].due_date);
 }
 
 /**

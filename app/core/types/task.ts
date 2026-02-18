@@ -1,5 +1,5 @@
 // core/types/task.ts
-
+export type TaskKind = 'one_off' | 'permanent' | 'preset';
 /**
  * Core Task Interface
  * Minimal for Sprint 1
@@ -11,14 +11,21 @@ export interface Task {
   title: string;
   completed: boolean;
   createdAt: Date;
-
+    /** 
+   * Task discriminator
+   * Defaults to 'one_off'
+   * Used by domain logic (taskActions)
+   */
+  kind?: TaskKind;
   // ===== OPTIONAL EXTENSIONS =====
   // Can be added later by features
   description?: string;
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
-  category?: string;
+  category?: string;      // Legacy - display name
+  categoryId?: string;    // Foreign key to categories table
   dueDate?: Date;
+  completedAt?: Date;     // When task was marked complete (for stats)
   startDate?: Date; // Hidden until start date
   subtasks?: SubTask[];
   recurring?: RecurringConfig;
@@ -101,6 +108,7 @@ export class TaskFactory
       title,
       completed: false,
       createdAt: new Date(),
+      kind: 'one_off', // ✅ DEFAULT
       //TODO  at later sprints call functions from features here to set values for other task attributes
     };
   } //returns a task 

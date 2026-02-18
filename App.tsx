@@ -1,12 +1,33 @@
 // App.tsx
+// =============================================================================
+// APP ENTRY POINT
+// =============================================================================
+//
+// Root component that initializes the database and renders the main navigator.
+//
+// NAVIGATION STRUCTURE:
+//   App.tsx
+//     └── MainNavigator (bottom tab bar)
+//           ├── TasksStack (All Tasks tab)
+//           │     ├── AllTasksScreen
+//           │     ├── CreateTaskScreen
+//           │     ├── CreatePermanentTaskScreen
+//           │     └── UsePermanentTaskScreen
+//           ├── TodayScreen (Today tab)
+//           ├── StatsScreen (Stats tab)
+//           └── BrowseScreen (Browse tab)
+//
+// =============================================================================
+
 import React from 'react';
-import { HomeScreen } from './app/screens/HomeScreen';
+import { MainNavigator } from './app/navigation/MainNavigator';
 import { initializeAllSchemas } from './app/core/services/storage/schema';
 
 // Initialize database tables before the app renders
-//sprint 2 database intialize all schema
-initializeAllSchemas(); //function located in services storage index.ts
+initializeAllSchemas();
 
 export default function App() {
-  return <HomeScreen />;
+  // MainNavigator handles bottom tab bar and all screen navigation
+  // Location: app/navigation/MainNavigator.tsx
+  return <MainNavigator />;
 }
