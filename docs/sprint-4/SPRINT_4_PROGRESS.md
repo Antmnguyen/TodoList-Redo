@@ -158,6 +158,26 @@ Each graph uses `Math.sin(seed + 1) * 10000` hashing to derive stable, consisten
 
 ---
 
+---
+
+## Overall & Category Detail Screen Navigation *(2026-02-20)*
+
+### What was built
+- `OverallDetailScreen.tsx` — placeholder screen. `DetailHeader` shows `params.name` + orange accent; body shows "coming soon". Wired for all 4 Overall cards.
+- `CategoryDetailScreen.tsx` — placeholder screen. `DetailHeader` shows category name + category's own color; body shows "coming soon". Wired for all Category cards.
+- `MainNavigator.tsx` — `StatDetail` case now routes all three types:
+  - `'all'` → `OverallDetailScreen`
+  - `'category'` → `CategoryDetailScreen`
+  - `'template'` → `PermanentDetailScreen`
+
+### Personalization per card
+Each card passes distinct `params` (id, name, color, initialTimeRange) through `handleCardPress`, so every tap opens a screen personalised to that specific entity. One screen component per type — content is unique per card via params.
+
+### Dynamic scaling
+Category and Permanent Task card lists map over arrays — adding a new category or template to the DB automatically produces a new card and a new personalized detail screen with no navigator changes required.
+
+---
+
 ## What's Next (Sprint 4 remaining phases)
 
 | Phase | Work |

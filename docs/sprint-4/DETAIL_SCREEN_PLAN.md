@@ -526,7 +526,7 @@ interface StatDetailParams {
 5. Detail screen receives `params` + `onBack` → calls `goBack()` on back press
 
 ```typescript
-// StatsScreen — updated handleCardPress (conceptual)
+// StatsScreen — handleCardPress (implemented)
 const handleCardPress = (data: StatPreviewData) => {
   onStatCardPress({
     type: data.type,
@@ -537,7 +537,7 @@ const handleCardPress = (data: StatPreviewData) => {
   });
 };
 
-// MainNavigator — renderOverlayScreen addition
+// MainNavigator — renderOverlayScreen (implemented)
 case 'StatDetail': {
   const p = statDetailParams!;
   if (p.type === 'all')      return <OverallDetailScreen params={p} onBack={goBack} />;
@@ -545,6 +545,23 @@ case 'StatDetail': {
   if (p.type === 'template') return <PermanentDetailScreen params={p} onBack={goBack} />;
 }
 ```
+
+### Dynamic card scaling
+
+Card lists for categories and permanent tasks are **fully dynamic** — `StatsScreen` maps over the array returned by the data source:
+
+```tsx
+{templates.map((t, i) => <StatPreviewCard key={t.id} data={t} onPress={handleCardPress} ... />)}
+{categories.map((c, i) => <StatPreviewCard key={c.id} data={c} onPress={handleCardPress} ... />)}
+```
+
+When mock functions are replaced with real storage hooks, every new template or category in the DB automatically gets its own card and its own personalized detail screen — no navigator changes needed. The detail screen is personalized via `params.id`, `params.name`, and `params.color` passed through `handleCardPress`.
+
+| Replace mock with | Real hook |
+|-------------------|-----------|
+| `getMockTemplateStats()` | `useStats().getTemplateStatsList()` |
+| `getMockCategoryStats()` | `useStats().getCategoryStatsList()` |
+| `getMockPermanentDetail(id)` | `useStats().getPermanentDetailStats(id)` |
 
 ---
 
@@ -587,14 +604,14 @@ case 'StatDetail': {
 - [x] **`StatDetailParams`** extracted to `app/core/types/statDetailTypes.ts` to avoid circular imports between `MainNavigator` ↔ detail screens
 
 ### Screen files
-- [ ] **5.6** `OverallDetailScreen.tsx` — assemble shared + overall-specific components, time range tab state, week navigator state
-- [ ] **5.7** `CategoryDetailScreen.tsx` — assemble shared + category-specific components
-- [x] **5.8** `PermanentDetailScreen.tsx` — assembled and wired. Tapping any permanent task card in StatsScreen opens this screen with that task's data.
+- [x] **5.6** `OverallDetailScreen.tsx` — placeholder screen wired. Shows `params.name` + accent color in `DetailHeader`, "coming soon" body. All 4 Overall cards (All Time / This Year / This Month / This Week) route here with distinct `params.id`, `params.name`, and `params.initialTimeRange`.
+- [x] **5.7** `CategoryDetailScreen.tsx` — placeholder screen wired. Shows category name + category color in `DetailHeader`, "coming soon" body. All Category cards route here with distinct `params.id`, `params.name`, and `params.color`.
+- [x] **5.8** `PermanentDetailScreen.tsx` — fully assembled and wired. Tapping any permanent task card in StatsScreen opens this screen with that task's data.
 
 ### Data (mock first, real data in Phase 3/6)
 - [x] **5.9** `getMockPermanentDetail(id)` in `PermanentDetailScreen.tsx` — varies output by template id so different cards show different numbers
-- [ ] **5.9** Mock data builders still needed for `OverallDetailScreen` and `CategoryDetailScreen`
-- [ ] **5.10** Wire `PermanentTaskListCard` press → navigate to `PermanentDetailScreen` from within `CategoryDetailScreen` (nested detail navigation)
+- [ ] **5.10** Mock data builders needed for `OverallDetailScreen` and `CategoryDetailScreen` when those screens are fully built out
+- [ ] **5.11** Wire `PermanentTaskListCard` press → navigate to `PermanentDetailScreen` from within `CategoryDetailScreen` (nested detail navigation)
 
 ---
 

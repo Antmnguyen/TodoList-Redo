@@ -32,6 +32,8 @@ import { UsePermanentTaskScreen } from '../screens/tasks/UsePermanentTaskScreen'
 
 // Screens - Stat detail screens
 import { PermanentDetailScreen } from '../screens/stats/detail/PermanentDetailScreen';
+import { OverallDetailScreen }   from '../screens/stats/detail/OverallDetailScreen';
+import { CategoryDetailScreen }  from '../screens/stats/detail/CategoryDetailScreen';
 
 // Types
 import { StatDetailParams } from '../core/types/statDetailTypes';
@@ -112,10 +114,7 @@ export const MainNavigator: React.FC = () => {
 
   /**
    * Called by StatsScreen when any StatPreviewCard is tapped.
-   * Stores the card's params and opens the correct detail screen overlay.
-   *
-   * Currently only 'template' type has a built detail screen.
-   * 'all' and 'category' will be wired up in Phase 5 (tasks 5.6 and 5.7).
+   * Routes to the correct detail screen based on the card type.
    */
   const handleStatCardPress = (p: StatDetailParams) => {
     setStatDetailParams(p);
@@ -162,9 +161,6 @@ export const MainNavigator: React.FC = () => {
       case 'today':
         return <TodayScreen key={`today-${refreshKey}`} />;
       case 'stats':
-        // Pass the card-press handler so template cards open PermanentDetailScreen.
-        // The handler is also ready to receive 'all' and 'category' cards once
-        // their detail screens are built (Phase 5 tasks 5.6–5.7).
         return <StatsScreen onStatCardPress={handleStatCardPress} />;
       case 'browse':
         return <BrowseScreen />;
@@ -205,19 +201,16 @@ export const MainNavigator: React.FC = () => {
         if (!statDetailParams) return null;
 
         // Route to the correct detail screen based on which type of card was tapped.
-        // 'template' → PermanentDetailScreen (implemented)
-        // 'all'      → OverallDetailScreen   (Phase 5 — not yet built)
-        // 'category' → CategoryDetailScreen  (Phase 5 — not yet built)
         if (statDetailParams.type === 'template') {
-          return (
-            <PermanentDetailScreen
-              params={statDetailParams}
-              onBack={goBack}
-            />
-          );
+          return <PermanentDetailScreen params={statDetailParams} onBack={goBack} />;
+        }
+        if (statDetailParams.type === 'all') {
+          return <OverallDetailScreen params={statDetailParams} onBack={goBack} />;
+        }
+        if (statDetailParams.type === 'category') {
+          return <CategoryDetailScreen params={statDetailParams} onBack={goBack} />;
         }
 
-        // Fallback for 'all' and 'category' until those screens are built
         return null;
       }
 
