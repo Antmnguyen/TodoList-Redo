@@ -30,6 +30,12 @@ import { CreateTaskScreen, CreateTaskFormData } from '../screens/tasks/CreateTas
 import { CreatePermanentTaskScreen, PermanentTaskFormData } from '../screens/tasks/CreatePermanentTaskScreen';
 import { UsePermanentTaskScreen } from '../screens/tasks/UsePermanentTaskScreen';
 
+// Screens - Stat detail screens
+import { PermanentDetailScreen } from '../screens/stats/detail/PermanentDetailScreen';
+
+// Types
+import { StatDetailParams } from '../core/types/statDetailTypes';
+
 // Components
 import { FloatingCreateTaskButton } from '../components/tasks/FloatingCreateTaskButton';
 
@@ -42,7 +48,13 @@ import { Task } from '../core/types/task';
 // =============================================================================
 
 type TabKey = 'tasks' | 'today' | 'stats' | 'browse';
-type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask';
+
+/**
+ * All full-screen overlays the navigator can render.
+ * 'StatDetail' covers all three detail screen types (template / category / all)
+ * — the correct screen is chosen at render time based on statDetailParams.type.
+ */
+type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask' | 'StatDetail';
 
 // =============================================================================
 // TAB CONFIGURATION
@@ -78,6 +90,13 @@ export const MainNavigator: React.FC = () => {
   const [overlayScreen, setOverlayScreen] = useState<OverlayScreen>('none');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  /**
+   * Params for the currently open StatDetail overlay.
+   * Null whenever overlayScreen !== 'StatDetail'.
+   * Cleared back to null in goBack() so stale params don't linger.
+   */
+  const [statDetailParams, setStatDetailParams] = useState<StatDetailParams | null>(null);
+
   // ---------------------------------------------------------------------------
   // FAB Handlers
   // ---------------------------------------------------------------------------
@@ -85,7 +104,23 @@ export const MainNavigator: React.FC = () => {
   const handleUsePermanentTask = () => setOverlayScreen('UsePermanentTask');
   const handleCreatePermanentTask = () => setOverlayScreen('CreatePermanentTask');
 
-  const goBack = () => setOverlayScreen('none');
+  const goBack = () => {
+    setOverlayScreen('none');
+    // Clear stat detail params so they don't persist across opens
+    setStatDetailParams(null);
+  };
+
+  /**
+   * Called by StatsScreen when any StatPreviewCard is tapped.
+   * Stores the card's params and opens the correct detail screen overlay.
+   *
+   * Currently only 'template' type has a built detail screen.
+   * 'all' and 'category' will be wired up in Phase 5 (tasks 5.6 and 5.7).
+   */
+  const handleStatCardPress = (p: StatDetailParams) => {
+    setStatDetailParams(p);
+    setOverlayScreen('StatDetail');
+  };
 
   // ---------------------------------------------------------------------------
   // Create Screen Callbacks
@@ -127,7 +162,10 @@ export const MainNavigator: React.FC = () => {
       case 'today':
         return <TodayScreen key={`today-${refreshKey}`} />;
       case 'stats':
-        return <StatsScreen />;
+        // Pass the card-press handler so template cards open PermanentDetailScreen.
+        // The handler is also ready to receive 'all' and 'category' cards once
+        // their detail screens are built (Phase 5 tasks 5.6–5.7).
+        return <StatsScreen onStatCardPress={handleStatCardPress} />;
       case 'browse':
         return <BrowseScreen />;
       default:
@@ -161,6 +199,28 @@ export const MainNavigator: React.FC = () => {
             onCancel={goBack}
           />
         );
+
+      case 'StatDetail': {
+        // Guard: params must be present (should always be true here)
+        if (!statDetailParams) return null;
+
+        // Route to the correct detail screen based on which type of card was tapped.
+        // 'template' → PermanentDetailScreen (implemented)
+        // 'all'      → OverallDetailScreen   (Phase 5 — not yet built)
+        // 'category' → CategoryDetailScreen  (Phase 5 — not yet built)
+        if (statDetailParams.type === 'template') {
+          return (
+            <PermanentDetailScreen
+              params={statDetailParams}
+              onBack={goBack}
+            />
+          );
+        }
+
+        // Fallback for 'all' and 'category' until those screens are built
+        return null;
+      }
+
       default:
         return null;
     }

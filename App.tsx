@@ -20,6 +20,7 @@
 // =============================================================================
 
 import React from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MainNavigator } from './app/navigation/MainNavigator';
 import { initializeAllSchemas } from './app/core/services/storage/schema';
 
@@ -27,7 +28,15 @@ import { initializeAllSchemas } from './app/core/services/storage/schema';
 initializeAllSchemas();
 
 export default function App() {
-  // MainNavigator handles bottom tab bar and all screen navigation
+  // SafeAreaProvider must be at the root so any descendant can call
+  // useSafeAreaInsets() without crashing. It provides the device's safe-area
+  // inset values (notch, home indicator, status bar height) to the whole tree.
+  //
+  // MainNavigator handles bottom tab bar and all screen navigation.
   // Location: app/navigation/MainNavigator.tsx
-  return <MainNavigator />;
+  return (
+    <SafeAreaProvider>
+      <MainNavigator />
+    </SafeAreaProvider>
+  );
 }

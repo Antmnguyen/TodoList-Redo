@@ -32,6 +32,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CircularProgress } from './CircularProgress';
+import { safePct } from '../../core/utils/statUtils';
 
 // =============================================================================
 // TYPES  (exported — StatsScreen uses these)
@@ -65,10 +66,6 @@ const MONTHS = ['January','February','March','April','May','June',
 
 function formatDate(d: Date): string {
   return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
-}
-
-function safePct(done: number, total: number): number {
-  return total > 0 ? Math.round((done / total) * 100) : 0;
 }
 
 // =============================================================================

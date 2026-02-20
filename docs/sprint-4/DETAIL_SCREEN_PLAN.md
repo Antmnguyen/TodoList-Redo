@@ -534,18 +534,21 @@ case 'StatDetail': {
 
 ## Phase 4 Task Checklist — Detail Components
 
+### Shared Utility
+- [x] **`safePct`** — extracted from `TodayCard.tsx` to `app/core/utils/statUtils.ts`. `TodayCard` now imports from there. All detail components use the shared version.
+
 ### Shared Components (`components/stats/detail/shared/`)
-- [ ] **4.1**  `DetailHeader.tsx` — back button + title + colored background
-- [ ] **4.2**  `CompletionSummaryCard.tsx` — ring (size 96) + completed count + rate %
-- [ ] **4.3**  `StreakCard.tsx` — current streak pill + best streak pill side by side
-- [ ] **4.4**  `TimeRangeCountsCard.tsx` — 4-box row: week / month / year / all time
-- [ ] **4.5**  `TimeRangePicker.tsx` — 4-tab strip (Week / Month / Year / All Time), all screens
-- [ ] **4.6**  `WeekNavigator.tsx` — prev/next week arrows + date range label, all screens
-- [ ] **4.7**  `WeekBarGraph.tsx` — full-width 7-bar chart with count/% toggle
-- [ ] **4.8**  `MonthCalendarGraph.tsx` — calendar grid with colored day circles
-- [ ] **4.9**  `YearOverviewGraph.tsx` — 12-bar monthly summary chart
-- [ ] **4.10** `DayOfWeekPatternCard.tsx` — completions by day of week (Mon–Sun), all screens
-- [ ] **4.11** `TaskTypeBreakdownCard.tsx` — permanent vs one-off split (Overall + Category only)
+- [x] **4.1**  `DetailHeader.tsx` — back button + title + colored background
+- [x] **4.2**  `CompletionSummaryCard.tsx` — ring (size 96) + completed count + rate %
+- [x] **4.3**  `StreakCard.tsx` — current streak pill + best streak pill side by side
+- [x] **4.4**  `TimeRangeCountsCard.tsx` — 4-box row: week / month / year / all time
+- [x] **4.5**  `TimeRangePicker.tsx` — 4-tab strip (Week / Month / Year / All Time), all screens
+- [x] **4.6**  `WeekNavigator.tsx` — prev/next week arrows + date range label, all screens
+- [x] **4.7**  `WeekBarGraph.tsx` — full-width 7-bar chart with count/% toggle
+- [x] **4.8**  `MonthCalendarGraph.tsx` — calendar grid with colored day circles
+- [x] **4.9**  `YearOverviewGraph.tsx` — 12-bar monthly summary chart
+- [x] **4.10** `DayOfWeekPatternCard.tsx` — completions by day of week (Mon–Sun), all screens
+- [x] **4.11** `TaskTypeBreakdownCard.tsx` — permanent vs one-off split (Overall + Category only)
 
 ### Overall-specific Components (`components/stats/detail/overall/`)
 - [ ] **4.12** `CategoryBreakdownCard.tsx` — top-5 categories horizontal bar list
@@ -558,36 +561,39 @@ case 'StatDetail': {
 ## Phase 5 Task Checklist — Screen Assembly & Navigation
 
 ### Navigation wiring
-- [ ] **5.1** Add `'StatDetail'` to `OverlayScreen` type in `MainNavigator.tsx`
-- [ ] **5.2** Add `statDetailParams` state + `handleStatCardPress` to `MainNavigator`
-- [ ] **5.3** Add `onStatCardPress` prop to `StatsScreen` + wire `handleCardPress`
-- [ ] **5.4** Add `StatDetail` case to `renderOverlayScreen()` in `MainNavigator`
-- [ ] **5.5** Add `resolveInitialTimeRange()` helper for mapping overall card IDs to time range tabs
+- [x] **5.1** Add `'StatDetail'` to `OverlayScreen` type in `MainNavigator.tsx`
+- [x] **5.2** Add `statDetailParams` state + `handleStatCardPress` to `MainNavigator`
+- [x] **5.3** Add `onStatCardPress` prop to `StatsScreen` + wire `handleCardPress`
+- [x] **5.4** Add `StatDetail` case to `renderOverlayScreen()` in `MainNavigator` — routes 'template' → `PermanentDetailScreen`; 'all' and 'category' fall through to null until Phase 5 screens are built
+- [x] **5.5** `resolveInitialTimeRange()` added to `StatsScreen` — maps overall card ids to TimeRange tabs ready for when `OverallDetailScreen` is built
+
+### Shared types
+- [x] **`StatDetailParams`** extracted to `app/core/types/statDetailTypes.ts` to avoid circular imports between `MainNavigator` ↔ detail screens
 
 ### Screen files
 - [ ] **5.6** `OverallDetailScreen.tsx` — assemble shared + overall-specific components, time range tab state, week navigator state
 - [ ] **5.7** `CategoryDetailScreen.tsx` — assemble shared + category-specific components
-- [ ] **5.8** `PermanentDetailScreen.tsx` — assemble shared + permanent-specific components
+- [x] **5.8** `PermanentDetailScreen.tsx` — assembled and wired. Tapping any permanent task card in StatsScreen opens this screen with that task's data.
 
 ### Data (mock first, real data in Phase 3/6)
-- [ ] **5.9** Define mock data builders for each detail type in their screen file
+- [x] **5.9** `getMockPermanentDetail(id)` in `PermanentDetailScreen.tsx` — varies output by template id so different cards show different numbers
+- [ ] **5.9** Mock data builders still needed for `OverallDetailScreen` and `CategoryDetailScreen`
 - [ ] **5.10** Wire `PermanentTaskListCard` press → navigate to `PermanentDetailScreen` from within `CategoryDetailScreen` (nested detail navigation)
 
 ---
 
-## Shared Utility — `safePct`
+## Shared Utility — `safePct` ✅ DONE
 
-Currently defined locally in `TodayCard.tsx`. Extract to a shared utility since every detail component needs it.
-
-**Target file:** `app/core/utils/statUtils.ts`
+~~Currently defined locally in `TodayCard.tsx`.~~ Extracted to `app/core/utils/statUtils.ts`.
 
 ```typescript
+// app/core/utils/statUtils.ts
 export function safePct(done: number, total: number): number {
   return total > 0 ? Math.round((done / total) * 100) : 0;
 }
 ```
 
-Import into: `TodayCard`, `CompletionSummaryCard`, `WeekBarGraph`, `CategoryBreakdownCard`, etc.
+Imported by: `TodayCard`, `CompletionSummaryCard`, `WeekBarGraph`, `TaskTypeBreakdownCard`, `DayOfWeekPatternCard`.
 
 ---
 
@@ -600,6 +606,226 @@ Each screen builds its mock data inline (same pattern as `getMockTodayStats()` i
 | `getMockOverallDetail(id, timeRange)` | `useStats().getOverallDetailStats(id, timeRange)` |
 | `getMockCategoryDetail(categoryName)` | `useStats().getCategoryDetailStats(categoryName)` |
 | `getMockPermanentDetail(templateId)` | `useStats().getPermanentDetailStats(templateId)` |
+
+---
+
+---
+
+## Phase 6 TODOs — Segmented Bars & Category Visualization
+
+These enhancements build on the existing shared graph components to add richer visual breakdowns for the Overall and Category detail screens. They are **not** needed for the first working version — complete Phase 5 first — but are clearly scoped here so they can be tackled in one pass.
+
+---
+
+### 6-A  Segmented / Stacked Bars — Overall & Category screens
+
+#### What
+Replace the current solid-color bars in `WeekBarGraph` and `YearOverviewGraph` with **stacked segmented bars** that split each bar into colored slices by task type or category. The total bar height stays the same; the fill is divided.
+
+#### Why
+A bar of height 15 currently tells the user "15 tasks done." A segmented bar tells them "15 tasks done: 9 permanent (green) + 6 one-off (blue)," or "15 done: 5 Work (purple) + 4 Health (red) + 6 Fitness (orange)."
+
+#### Segmentation rules by screen
+
+| Screen | `WeekBarGraph` segmentation | `YearOverviewGraph` segmentation |
+|--------|----------------------------|----------------------------------|
+| **Overall** | 2 segments: permanent (`#34C759` green) vs one-off (`#007AFF` blue) | 2 segments: permanent vs one-off (same colors) |
+| **Category** | 2 segments: permanent vs one-off tasks *within this category* | Top-N permanent tasks within the category, each their own accent color; remainder lumped as "other" |
+| **Permanent** | No change — single task, single color is correct | No change |
+
+#### Data shape changes required
+
+`DayData` (WeekBarGraph source) and `MonthData` (YearOverviewGraph source) currently only carry `completed` and `total`. They need a `segments` array:
+
+```typescript
+interface DataSegment {
+  label: string;          // e.g. "Permanent" / "One-off" / category name
+  color: string;          // hex fill color for this slice
+  count: number;          // completions in this segment
+}
+
+// Add to DayData (WeeklyMiniChart.tsx):
+export interface DayData {
+  day:       string;
+  count:     number;
+  total?:    number;
+  segments?: DataSegment[];   // ← NEW — absent = render as solid bar (backward compat)
+}
+
+// Add to MonthData (YearOverviewGraph.tsx):
+export interface MonthData {
+  month:     number;
+  completed: number;
+  total:     number;
+  segments?: DataSegment[];   // ← NEW — absent = render as solid bar
+}
+```
+
+Omitting `segments` keeps all existing screens (PermanentDetailScreen) unchanged.
+
+#### Rendering approach — stacked bar
+
+Replace the single `<View style={{ height: barHeight, backgroundColor: color }}>` in each bar column with a `FlatList` / `map` of segment slices stacked vertically (bottom to top):
+
+```
+┌──────────────────┐
+│  one-off (blue)  │  ← top slice, height proportional to oneOffCount / maxCount
+├──────────────────┤
+│ permanent (green)│  ← bottom slice, height proportional to permanentCount / maxCount
+└──────────────────┘
+   M (Monday)
+   9   (total below, in % mode → "75%")
+```
+
+Each segment slice is a `<View>` with its `height` proportional to `segment.count / maxCount * BAR_MAX_HEIGHT` (Count mode) or `segment.count / totalForDay * BAR_MAX_HEIGHT` (% mode). The bar container is a column with `justifyContent: 'flex-end'`.
+
+#### Files to change
+
+- [ ] **TODO-6A-1** `app/components/stats/WeeklyMiniChart.tsx` — add `segments?: DataSegment[]` to `DayData` interface
+- [ ] **TODO-6A-2** `app/components/stats/detail/shared/WeekBarGraph.tsx` — update `BarColumn` to render stacked segments when `item.segments` is present; fall back to solid bar when absent
+- [ ] **TODO-6A-3** `app/components/stats/detail/shared/YearOverviewGraph.tsx` — update `MonthBar` to render stacked segments when `item.segments` is present
+- [ ] **TODO-6A-4** `app/screens/stats/detail/OverallDetailScreen.tsx` — populate `segments` in weekly and yearly mock/real data with permanent vs one-off split
+- [ ] **TODO-6A-5** `app/screens/stats/detail/CategoryDetailScreen.tsx` — populate `segments` in weekly and yearly data with permanent vs one-off (or per-task) split
+
+---
+
+### 6-B  TimeRangeCountsCard — Split counts by task type
+
+#### What
+Below each existing count (Week / Month / Year / All Time), add a compact secondary line showing the permanent vs one-off breakdown:
+
+```
+This Week         12
+                   8 perm  ·  4 one-off
+
+This Month        48
+                  30 perm  · 18 one-off
+```
+
+#### Data shape change
+
+Add optional breakdown fields to each count bucket:
+
+```typescript
+interface CountBucket {
+  count:          number;
+  permanentCount?: number;    // ← NEW
+  oneOffCount?:   number;     // ← NEW
+}
+```
+
+If `permanentCount` and `oneOffCount` are absent the secondary line is simply not rendered (keeps PermanentDetailScreen unchanged — it only shows one task type anyway).
+
+#### Files to change
+
+- [ ] **TODO-6B-1** `app/components/stats/detail/shared/TimeRangeCountsCard.tsx` — add optional `permanentCount / oneOffCount` per bucket; render secondary split line when present
+- [ ] **TODO-6B-2** `app/screens/stats/detail/OverallDetailScreen.tsx` — supply permanent/oneOff split counts per bucket
+- [ ] **TODO-6B-3** `app/screens/stats/detail/CategoryDetailScreen.tsx` — supply permanent/oneOff split counts per bucket
+
+---
+
+### 6-C  Overall screen — Category stats & visualization
+
+The Overall detail screen currently shows a `CategoryBreakdownCard` (top-5 horizontal bar list). Add two complementary sections that give a richer picture of category-level performance.
+
+#### 6-C-1  CategoryStatsCard — headline numbers for categories
+
+A compact card showing aggregate category stats:
+
+```
+CATEGORIES                                        [3 active]
+
+  Total categories       8
+  Active this month      3        ← has ≥1 completion this month
+  Top category       Work  64%    ← highest completion rate
+  Least active      Study   8%    ← lowest (non-zero) rate
+```
+
+**Component:** `app/components/stats/detail/overall/CategoryStatsCard.tsx`
+
+**Props:**
+```typescript
+interface CategoryStatsCardProps {
+  totalCategories:  number;
+  activeThisMonth:  number;
+  topCategory:      { name: string; color: string; rate: number };
+  leastActive:      { name: string; color: string; rate: number };
+  color:            string;   // accent for highlighted values
+}
+```
+
+- [ ] **TODO-6C-1** Create `CategoryStatsCard.tsx` — 4-row stat grid with colored top/least category labels
+
+#### 6-C-2  CategoryYearGraph — category breakdown across the year
+
+A version of `YearOverviewGraph` where each month bar is **stacked by category**, showing which categories drove that month's completions. This directly answers "was March busy because of Work tasks or Health tasks?"
+
+```
+COMPLETIONS BY CATEGORY — YEAR
+
+████                      ← Jan: Work(purple) + Health(red)
+     ████                 ← Feb: mostly Work
+          ██              ← Mar: small mix
+J  F  M  A  M  J  J  A  S  O  N  D
+```
+
+- Each slice uses that category's own color.
+- Hovering / tapping (Phase 6 tooltip) shows the category name + count for that slice.
+- The legend below the graph lists the top-N categories with their colors.
+
+**Component:** `app/components/stats/detail/overall/CategoryYearGraph.tsx`
+
+**Props:**
+```typescript
+interface CategoryYearGraphProps {
+  /** 12 months, each with per-category segment counts */
+  data: CategoryMonthData[];
+  color: string;
+}
+
+interface CategoryMonthData {
+  month: number;   // 0–11
+  total: number;   // sum across all categories
+  segments: Array<{
+    categoryName:  string;
+    categoryColor: string;
+    count:         number;
+  }>;
+}
+```
+
+- [ ] **TODO-6C-2** Create `CategoryYearGraph.tsx` — stacked year bars by category; reuse `YearOverviewGraph` layout/styling; swap `MonthBar` internals for a segmented version
+- [ ] **TODO-6C-3** Slot `CategoryStatsCard` + `CategoryYearGraph` into `OverallDetailScreen` between `CategoryBreakdownCard` and the bottom padding
+- [ ] **TODO-6C-4** Add `categoryYearData: CategoryMonthData[]` to the Overall mock data builder
+
+#### 6-C-3  CategoryBreakdownCard — add % toggle
+
+The existing `CategoryBreakdownCard` shows raw counts per category. Add a Count/% toggle (same pill pattern as other graphs) so it can show each category's *completion rate* (done ÷ total) instead of raw volume.
+
+- [ ] **TODO-6C-5** `CategoryBreakdownCard.tsx` — add internal `mode: 'count' | 'percent'` toggle; in % mode show each category's completion rate bar and percentage label instead of raw count
+
+---
+
+### Phase 6 Checklist Summary
+
+#### Segmented bars
+- [ ] **TODO-6A-1** Add `DataSegment` + `segments?` to `DayData` in `WeeklyMiniChart.tsx`
+- [ ] **TODO-6A-2** Stacked bars in `WeekBarGraph.tsx`
+- [ ] **TODO-6A-3** Stacked bars in `YearOverviewGraph.tsx`
+- [ ] **TODO-6A-4** Overall screen — populate segments (perm vs one-off)
+- [ ] **TODO-6A-5** Category screen — populate segments (perm vs one-off per task)
+
+#### TimeRangeCountsCard split
+- [ ] **TODO-6B-1** Add optional perm/one-off sub-line to `TimeRangeCountsCard.tsx`
+- [ ] **TODO-6B-2** Overall screen — supply perm/one-off counts per bucket
+- [ ] **TODO-6B-3** Category screen — supply perm/one-off counts per bucket
+
+#### Category visualization (Overall screen only)
+- [ ] **TODO-6C-1** Create `CategoryStatsCard.tsx`
+- [ ] **TODO-6C-2** Create `CategoryYearGraph.tsx` (stacked by category)
+- [ ] **TODO-6C-3** Slot both new cards into `OverallDetailScreen`
+- [ ] **TODO-6C-4** Add `categoryYearData` to Overall mock data builder
+- [ ] **TODO-6C-5** Add Count/% toggle to `CategoryBreakdownCard.tsx`
 
 ---
 
@@ -625,8 +851,8 @@ Added in this plan:
 - [ ] Back navigation returns to `StatsScreen` with tab bar restored
 - [ ] `OverallDetailScreen` time range picker correctly scopes all stats on screen
 - [ ] `WeekNavigator` correctly navigates past weeks (disabled on current week's next arrow)
-- [ ] `MonthCalendarGraph` renders correct days for any month (handles 28/29/30/31 days)
+- [x] `MonthCalendarGraph` renders correct days for any month (handles 28/29/30/31 days)
 - [ ] `PermanentTaskListCard` rows are tappable and open that template's detail screen
-- [ ] All shared components (`CompletionSummaryCard`, `StreakCard`, etc.) render identically across all three screen types
-- [ ] Mock data is realistic and exercises all UI states (empty streak, 0% completion, etc.)
-- [ ] `safePct` extracted and shared — no duplicate implementations
+- [x] All shared components (`CompletionSummaryCard`, `StreakCard`, etc.) built and ready for all three screen types
+- [x] Mock data is realistic and exercises all UI states (empty streak, 0% completion, etc.) — done for `PermanentDetailScreen`
+- [x] `safePct` extracted and shared — no duplicate implementations

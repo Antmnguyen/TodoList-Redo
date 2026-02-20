@@ -23,8 +23,10 @@ import { View, Text, StyleSheet } from 'react-native';
 // =============================================================================
 
 export interface DayData {
-  day: string;   // single character label: 'M', 'T', 'W', 'T', 'F', 'S', 'S'
-  count: number; // raw number of completions that day
+  day: string;    // single character label: 'M', 'T', 'W', 'T', 'F', 'S', 'S'
+  count: number;  // raw number of completions that day
+  total?: number; // tasks scheduled that day — optional; used by WeekBarGraph for
+                  // true per-day completion rate in % mode. WeeklyMiniChart ignores it.
 }
 
 interface WeeklyMiniChartProps {

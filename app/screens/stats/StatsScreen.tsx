@@ -24,15 +24,16 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Animated,
   Easing,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatPreviewCard, StatPreviewData } from '../../components/stats/StatPreviewCard';
 import { DayData } from '../../components/stats/WeeklyMiniChart';
 import { TodayCard, TodayStats } from '../../components/stats/TodayCard';
+import { StatDetailParams } from '../../core/types/statDetailTypes';
 
 // =============================================================================
 // COLLAPSIBLE SECTION
@@ -410,10 +411,45 @@ function getMockCategoryStats(): StatPreviewData[] {
 }
 
 // =============================================================================
+// PROPS
+// =============================================================================
+
+interface StatsScreenProps {
+  /**
+   * Called when any StatPreviewCard is tapped.
+   * MainNavigator provides this and routes to the correct detail screen
+   * based on the card's type ('template' | 'category' | 'all').
+   *
+   * Optional so StatsScreen can still be rendered standalone in tests
+   * or Storybook without a navigator wrapping it.
+   */
+  onStatCardPress?: (params: StatDetailParams) => void;
+}
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Maps an overall card's id (e.g. 'all_week') to the matching TimeRange tab
+ * so OverallDetailScreen opens pre-selected on the right tab.
+ * Only meaningful for type === 'all' cards — other types return undefined.
+ */
+function resolveInitialTimeRange(id: string): StatDetailParams['initialTimeRange'] {
+  const map: Record<string, StatDetailParams['initialTimeRange']> = {
+    all_week:  'week',
+    all_month: 'month',
+    all_year:  'year',
+    all_time:  'all',
+  };
+  return map[id];
+}
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
-export const StatsScreen: React.FC = () => {
+export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => {
   // ── Data (replace with real hooks when backend is ready) ──────────────────
   const todayStats  = getMockTodayStats();
   const overallList = getMockOverallStats();
@@ -421,9 +457,23 @@ export const StatsScreen: React.FC = () => {
   const categories  = getMockCategoryStats();
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  /**
+   * Fired by every StatPreviewCard tap, for all three card types.
+   * Converts StatPreviewData → StatDetailParams and delegates to the
+   * navigator's handler. Falls back to a log if no handler is wired.
+   */
   const handleCardPress = (data: StatPreviewData) => {
-    // TODO Sprint 4: navigate to StatDetailScreen(type=data.type, id=data.id)
-    console.log('Stat card tapped:', data.type, data.name);
+    if (!onStatCardPress) {
+      console.log('Stat card tapped (no handler):', data.type, data.name);
+      return;
+    }
+    onStatCardPress({
+      type:               data.type,
+      id:                 data.id,
+      name:               data.name,
+      color:              data.color,
+      initialTimeRange:   data.type === 'all' ? resolveInitialTimeRange(data.id) : undefined,
+    });
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
