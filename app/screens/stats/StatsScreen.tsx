@@ -8,14 +8,8 @@
 //   - CATEGORIES    (one card per category)
 //   - PERMANENT TASKS (one card per template)
 //
-// DATA LAYER (current state):
-//   All data is placeholder mock values. When Sprint 4 backend work is ready,
-//   swap each getMock*() call with the real hook/storage function.
-//
-//   Functions to replace later:
-//     getMockOverallStats()      → useStats().getOverallStatsList()
-//     getMockTemplateStats()     → useStats().getTemplateStatsList()
-//     getMockCategoryStats()     → useStats().getCategoryStatsList()
+// DATA LAYER:
+//   All data pulls from useStats() — no mock functions remain.
 //
 // =============================================================================
 
@@ -31,9 +25,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatPreviewCard, StatPreviewData } from '../../components/stats/StatPreviewCard';
-import { DayData } from '../../components/stats/WeeklyMiniChart';
-import { TodayCard, TodayStats } from '../../components/stats/TodayCard';
+import { TodayCard } from '../../components/stats/TodayCard';
 import { StatDetailParams } from '../../core/types/statDetailTypes';
+import { useStats } from '../../core/hooks/useStats';
 
 // =============================================================================
 // COLLAPSIBLE SECTION
@@ -263,152 +257,6 @@ const innerCard = {
 };
 const innerCardFirst = { ...innerCard, borderTopWidth: 0 };
 
-// =============================================================================
-// MOCK DATA HELPERS
-// =============================================================================
-
-/** Build a 7-item Mon–Sun week array from raw completion counts. */
-function week(mon: number, tue: number, wed: number, thu: number, fri: number, sat: number, sun: number): DayData[] {
-  return [
-    { day: 'M', count: mon },
-    { day: 'T', count: tue },
-    { day: 'W', count: wed },
-    { day: 'T', count: thu },
-    { day: 'F', count: fri },
-    { day: 'S', count: sat },
-    { day: 'S', count: sun },
-  ];
-}
-
-// ---------------------------------------------------------------------------
-// Replace these functions with real backend calls in Sprint 4
-// ---------------------------------------------------------------------------
-
-/** Today's snapshot — replace with useStats().getTodayStats() */
-function getMockTodayStats(): TodayStats {
-  return {
-    totalTasks:      12,
-    completedTasks:  8,
-    permanentTotal:  4,
-    permanentDone:   3,
-    oneOffTotal:     8,
-    oneOffDone:      5,
-    categories: [
-      { name: 'Work',      color: '#007AFF', total: 5, done: 4 },
-      { name: 'Health',    color: '#FF9500', total: 4, done: 2 },
-      { name: 'Lifestyle', color: '#34C759', total: 3, done: 2 },
-    ],
-    streak: 5,
-  };
-}
-
-/** Overall stats — All Time, This Year, This Month, This Week. */
-function getMockOverallStats(): StatPreviewData[] {
-  return [
-    {
-      type: 'all',
-      id: 'all_time',
-      name: 'All Time',
-      totalCompleted: 156,
-      completionPercent: 78,
-      currentStreak: 12,
-      weeklyData: week(8, 6, 4, 8, 2, 0, 0),
-      color: '#FF9500',
-    },
-    {
-      type: 'all',
-      id: 'all_year',
-      name: 'This Year',
-      totalCompleted: 620,
-      completionPercent: 74,
-      currentStreak: 5,
-      weeklyData: week(8, 6, 4, 8, 2, 0, 0),
-      color: '#FF9500',
-    },
-    {
-      type: 'all',
-      id: 'all_month',
-      name: 'This Month',
-      totalCompleted: 84,
-      completionPercent: 72,
-      currentStreak: 5,
-      weeklyData: week(8, 6, 4, 8, 2, 0, 0),
-      color: '#FF9500',
-    },
-    {
-      type: 'all',
-      id: 'all_week',
-      name: 'This Week',
-      totalCompleted: 28,
-      completionPercent: 67,
-      currentStreak: 5,
-      weeklyData: week(8, 6, 4, 8, 2, 0, 0),
-      color: '#FF9500',
-    },
-  ];
-}
-
-/** One card per permanent task template. */
-function getMockTemplateStats(): StatPreviewData[] {
-  return [
-    {
-      type: 'template',
-      id: 'tpl_morning',
-      name: 'Morning Workout',
-      totalCompleted: 45,
-      completionPercent: 90,
-      currentStreak: 7,
-      weeklyData: week(1, 1, 1, 1, 1, 1, 0),
-      color: '#007AFF',
-    },
-    {
-      type: 'template',
-      id: 'tpl_review',
-      name: 'Weekly Review',
-      totalCompleted: 12,
-      completionPercent: 60,
-      currentStreak: 2,
-      weeklyData: week(0, 0, 0, 0, 1, 0, 0),
-      color: '#007AFF',
-    },
-  ];
-}
-
-/** One card per category. */
-function getMockCategoryStats(): StatPreviewData[] {
-  return [
-    {
-      type: 'category',
-      id: 'cat_work',
-      name: 'Work',
-      totalCompleted: 64,
-      completionPercent: 85,
-      currentStreak: 9,
-      weeklyData: week(5, 5, 4, 5, 3, 0, 0),
-      color: '#007AFF',
-    },
-    {
-      type: 'category',
-      id: 'cat_health',
-      name: 'Health',
-      totalCompleted: 38,
-      completionPercent: 70,
-      currentStreak: 5,
-      weeklyData: week(3, 2, 3, 1, 2, 1, 0),
-      color: '#FF9500',
-    },
-    {
-      type: 'category',
-      id: 'cat_lifestyle',
-      name: 'Lifestyle',
-      totalCompleted: 54,
-      completionPercent: 65,
-      currentStreak: 3,
-      weeklyData: week(2, 2, 1, 3, 2, 4, 1),
-      color: '#34C759',
-    },
-  ];
-}
 
 // =============================================================================
 // PROPS
@@ -450,11 +298,12 @@ function resolveInitialTimeRange(id: string): StatDetailParams['initialTimeRange
 // =============================================================================
 
 export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => {
-  // ── Data (replace with real hooks when backend is ready) ──────────────────
-  const todayStats  = getMockTodayStats();
-  const overallList = getMockOverallStats();
-  const templates   = getMockTemplateStats();
-  const categories  = getMockCategoryStats();
+  // ── Data ─────────────────────────────────────────────────────────────────
+  const stats       = useStats();
+  const todayStats  = stats.getTodayStats();
+  const overallList = stats.getOverallStatsList();
+  const templates   = stats.getTemplateStatsList();
+  const categories  = stats.getCategoryStatsList();
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   /**

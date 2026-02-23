@@ -10,8 +10,10 @@ import {
 } from '../../features/permanentTask/utils/permanentTaskActions';
 
 // ===== STORAGE =====
-import { saveTask } from '../services/storage/taskStorage';
+import { saveTask, getAllTasks } from '../services/storage/taskStorage';
 import { deleteTask as deleteTaskDB } from '../services/storage/taskStorage';
+import { logCompletion, logAutoFail } from '../services/storage/statsStorage';
+import { toLocalDateString } from '../utils/statsCalculations';
 
 /**
  * UNIVERSAL TASK ACTIONS
@@ -60,23 +62,33 @@ export async function createTask(
  * Routes to appropriate handler based on task.kind.
  */
 export async function completeTask(task: Task): Promise<Task> {
+  let completed: Task;
+
   switch (task.kind) {
     case 'permanent':
-      return await handlePermanentCompletion(task);
-    
+      completed = await handlePermanentCompletion(task);
+      break;
+
     case 'preset':
-      // Future: return await handlePresetCompletion(task);
       throw new Error('Preset task completion not yet implemented');
-    
+
     case 'one_off':
     default:
-      const completed = {
-        ...TaskFactory.complete(task),
-        completedAt: new Date(), // Track completion time for stats
-      };
+      completed = { ...TaskFactory.complete(task), completedAt: new Date() };
       await saveTask(completed);
-      return completed;
   }
+
+  // Condition A: log the completion event
+  logCompletion({
+    taskId:        task.id,
+    templateId:    task.kind === 'permanent' ? (task.metadata as any)?.permanentId ?? null : null,
+    categoryId:    task.categoryId ?? null,
+    taskKind:      task.kind === 'permanent' ? 'permanent' : 'one_off',
+    completedAt:   completed.completedAt?.getTime() ?? Date.now(),
+    scheduledDate: task.dueDate ? toLocalDateString(task.dueDate) : null,
+  });
+
+  return completed;
 }
 
 // ======== DELETE TASK ========
@@ -214,6 +226,42 @@ export async function uncompleteTask(task: Task): Promise<Task> {
       };
       await saveTask(uncompleted);
       return uncompleted;
+  }
+}
+
+// ======== AUTO-FAIL OVERDUE TASKS ========
+
+/**
+ * AUTO-FAIL OVERDUE TASKS
+ * -----------------------
+ * Runs on app start (before the task list loads) to handle tasks whose
+ * dueDate has passed since the last session.
+ *
+ * For each overdue incomplete task:
+ *   1. Logs an 'auto_failed' event to completion_log (attributed to the due day).
+ *   2. Pushes the task's dueDate forward by 1 day (Condition B).
+ *
+ * This keeps the task list accurate and the stats graph honest about missed days.
+ */
+export async function autoFailOverdueTasks(): Promise<void> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const allTasks = await getAllTasks();
+  const overdue  = allTasks.filter(
+    t => !t.completed && t.dueDate && t.dueDate < todayStart
+  );
+
+  for (const task of overdue) {
+    logAutoFail({
+      taskId:        task.id,
+      templateId:    task.kind === 'permanent' ? (task.metadata as any)?.permanentId ?? null : null,
+      categoryId:    task.categoryId ?? null,
+      taskKind:      task.kind === 'permanent' ? 'permanent' : 'one_off',
+      failedAt:      Date.now(),
+      scheduledDate: toLocalDateString(task.dueDate!),
+    });
+    await pushTaskForward(task, 1);
   }
 }
 

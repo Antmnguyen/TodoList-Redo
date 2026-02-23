@@ -8,15 +8,16 @@ import {
   deleteTask,
   uncompleteTask,
   reassignTask,
+  autoFailOverdueTasks,
 } from '../domain/taskActions';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load tasks on mount
+  // Auto-fail any overdue tasks, then load the fresh task list
   useEffect(() => {
-    loadTasks();
+    autoFailOverdueTasks().then(loadTasks);
   }, []);
 
   async function loadTasks() {

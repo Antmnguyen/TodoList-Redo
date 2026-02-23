@@ -178,12 +178,52 @@ Category and Permanent Task card lists map over arrays — adding a new category
 
 ---
 
+---
+
+## Storage Layer — Steps 1–4 Complete *(2026-02-21)*
+
+### What was built
+
+**`app/core/utils/statsCalculations.ts`** (Step 1)
+Pure date math and streak logic — no storage or React imports. Functions: `toLocalDateString`, `startOfCurrentWeek`, `endOfCurrentWeek`, `startOfCurrentMonth`, `endOfCurrentMonth`, `prevDay`, `isNextDay`, `calcCurrentStreak`, `calcBestStreak`.
+
+**`app/core/services/storage/schema/completions.ts`** (Step 2)
+Defines and initializes the `completion_log` table — an append-only event log, one row per completion or auto-fail event. Includes:
+- Full DDL with `outcome TEXT NOT NULL DEFAULT 'completed'` column (`'completed' | 'auto_failed'`)
+- 4 indexes: `idx_clog_date`, `idx_clog_template`, `idx_clog_category`, `idx_clog_kind_date`
+- `addOutcomeMigration()` — `ALTER TABLE ADD COLUMN` with silent catch for existing installs that predate the `outcome` column
+- `backfillCompletionLog()` — one-time migration from existing `tasks` rows on first launch
+
+Registered as step 4 in `schema/index.ts` (`initializeCompletionsSchema()`).
+
+**`app/core/services/storage/statsStorage.ts`** (Step 3)
+Full read/write service for `completion_log`. Exports:
+- `logCompletion()` — writes `outcome = 'completed'` row (Condition A)
+- `logAutoFail()` — writes `outcome = 'auto_failed'` row with `completed_date = scheduledDate` (Condition B — attributed to the due day, not the detection day)
+- All read functions: `getCompletionsByDay/WithKind`, `getCompletionsByMonth/WithKind`, `getCompletionsByWeekday`, `getCompletionsByDayByCategory`, `getCompletionsByMonthByCategory`, `getCompletionSummary`, `getStatSummary`, `getTaskTypeSplit`, `getTopCategories`, `getPermanentTaskSummariesForCategory`, `getCompletionDates`, `getCurrentStreak`, `getBestStreak`
+
+**`app/core/domain/taskActions.ts`** + **`app/core/hooks/useTasks.ts`** (Step 4)
+Write-side wiring:
+- `completeTask()` restructured to capture result then call `logCompletion()` — exceptions from `handlePermanentCompletion` propagate before logging (no false entries)
+- `autoFailOverdueTasks()` added — finds overdue incomplete tasks, logs each as `auto_failed` (attributed to the due day), then calls `pushTaskForward(task, 1)`
+- `useTasks` mount effect changed to `autoFailOverdueTasks().then(loadTasks)`
+
+### ⚠️ Open item — permanent task logging verification
+
+The `templateId` field in log entries is read from `(task.metadata as any)?.permanentId`. This needs manual testing before Step 5:
+- Complete a permanent instance → verify `template_id` is set in `completion_log`
+- Set a permanent instance dueDate to yesterday → restart → verify `auto_failed` row has correct `template_id`
+- Confirm permanent **templates** (no dueDate) are never processed by `autoFailOverdueTasks()`
+
+See `STATS_COMPLETION_ROADMAP.md` Step 4 for the full test checklist.
+
+---
+
 ## What's Next (Sprint 4 remaining phases)
 
-| Phase | Work |
-|-------|------|
-| Phase 1 | Storage layer — `statsStorage.ts`, `statsCalculations.ts`, `useStats.ts` |
-| Phase 3 | Connect `StatsScreen` to real data (replace mock functions) |
-| Phase 4 | Detail screen components — `CompletionSummaryCard`, `TimeCompletionsCard`, graphs |
-| Phase 5 | `StatDetailScreen` + navigation from card tap |
-| Phase 6 | Empty states, loading states, edge cases |
+| Step | Work |
+|------|------|
+| **Step 5** ← NEXT | `useStats.ts` hook — wraps storage reads into UI-ready data bundles |
+| **Step 6** | Replace mock functions in `StatsScreen`, `OverallDetailScreen`, `CategoryDetailScreen`, `PermanentDetailScreen` one screen at a time |
+| **Step 7** | Wire past-period navigation (`onWeekChange`, `onMonthChange`, `onYearChange`) to real queries |
+| **Step 8** | Empty states + edge cases (zero completions, new user, single completion) |
