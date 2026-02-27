@@ -357,6 +357,31 @@ export async function getTemplateStats(templateId: string): Promise<TemplateStat
 }
 
 /**
+ * Cascade a template category change to all its existing instances.
+ *
+ * MUST be called whenever templates.category_id changes.
+ * Updates template_instances and tasks tables so pending instances
+ * stay consistent with the template's new category.
+ *
+ * Does NOT touch completion_log — historical completions are immutable
+ * and intentionally remain under the category they were completed in.
+ */
+export function updateTemplateCategoryInInstances(
+  permanentId: string,
+  newCategoryId: string | null
+): void {
+  db.runSync(
+    `UPDATE template_instances SET category_id = ? WHERE templateId = ?`,
+    [newCategoryId, permanentId]
+  );
+  db.runSync(
+    `UPDATE tasks SET category_id = ?
+      WHERE id IN (SELECT instanceId FROM template_instances WHERE templateId = ?)`,
+    [newCategoryId, permanentId]
+  );
+}
+
+/**
  * Returns a map from instanceId → template metadata for every row in
  * template_instances. Used by getAllTasks() to reconstruct `kind` and
  * `metadata` on tasks loaded from the DB, without N+1 queries.

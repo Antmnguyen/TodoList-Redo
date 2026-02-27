@@ -87,7 +87,10 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createTask } from '../../core/domain/taskActions';
-import { getAllPermanentTemplates } from '../../features/permanentTask/utils/permanentTaskActions';
+import {
+  getAllPermanentTemplates,
+  deletePermanentTask,
+} from '../../features/permanentTask/utils/permanentTaskActions';
 import { Task } from '../../core/types/task';
 
 // =============================================================================
@@ -150,6 +153,8 @@ export interface UsePermanentTaskScreenProps {
   onInstanceCreated?: (task: Task) => void;
   // Called when user taps Cancel in the main header — parent navigates back
   onCancel?: () => void;
+  // Called when user chooses "Edit Template" from the ⋮ menu
+  onEditTemplate?: (template: Task) => void;
 }
 
 // =============================================================================
@@ -159,6 +164,7 @@ export interface UsePermanentTaskScreenProps {
 export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
   onInstanceCreated,
   onCancel,
+  onEditTemplate,
 }) => {
   // =========================================================================
   // STATE
@@ -334,6 +340,30 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
     onCancel?.();
   };
 
+  // Called when the user confirms deletion from the ⋮ menu.
+  // Cascades delete to template, instances, and stats via deletePermanentTask.
+  const handleDeleteTemplate = (template: Task) => {
+    Alert.alert(
+      'Delete Template',
+      `Delete "${template.title}"? This will also delete all instances created from it. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePermanentTask(template);
+              setTemplates(prev => prev.filter(t => t.id !== template.id));
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete template.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // =========================================================================
   // RENDER HELPERS
   // Helper functions that return JSX for complex repeated elements.
@@ -371,6 +401,21 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
             </Text>
           )}
         </View>
+
+        {/* ⋮ options menu — Edit or Delete this template */}
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert(item.title, 'Choose an action', [
+              { text: 'Edit Template', onPress: () => onEditTemplate?.(item) },
+              { text: 'Delete Template', style: 'destructive', onPress: () => handleDeleteTemplate(item) },
+              { text: 'Cancel', style: 'cancel' },
+            ])
+          }
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.menuButton}
+        >
+          <Text style={styles.menuButtonText}>⋮</Text>
+        </TouchableOpacity>
 
         {/* Right-pointing chevron arrow — signals to the user the row is tappable */}
         <Text style={styles.templateArrow}>›</Text>
@@ -796,6 +841,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     marginTop: 4,
+  },
+  // ⋮ options menu button — sits between the content and the arrow
+  menuButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  menuButtonText: {
+    fontSize: 20,
+    color: '#8e8e93',
   },
   // "›" right-pointing arrow — light grey, signals the row is tappable
   templateArrow: {

@@ -1,5 +1,9 @@
 # Permanent Task Template Editing — Sprint 5 Implementation Plan
 
+> **Status: COMPLETE** — All 4 steps implemented and verified (2026-02-26).
+> Modified files: `UsePermanentTaskScreen.tsx`, `EditPermanentTaskScreen.tsx` (new),
+> `MainNavigator.tsx`, `permanentTaskStorage.ts`.
+
 **Goal:** Let users edit and delete permanent task templates from inside
 `UsePermanentTaskScreen`. No new tab or screen needed — the template list
 already exists; we just add a ⋮ menu to each row and wire up an edit screen.
@@ -260,7 +264,7 @@ MainNavigator.handleEditSave() → setRefreshKey → goBack()
 
 ---
 
-### Step 1 — Add ⋮ menu to template rows in `UsePermanentTaskScreen`
+### Step 1 — Add ⋮ menu to template rows in `UsePermanentTaskScreen` ✅ DONE
 
 **File:** `app/screens/tasks/UsePermanentTaskScreen.tsx`
 
@@ -343,7 +347,7 @@ menuButtonText: {
 
 ---
 
-### Step 2 — Create `EditPermanentTaskScreen.tsx`
+### Step 2 — Create `EditPermanentTaskScreen.tsx` ✅ DONE
 
 **File:** `app/screens/tasks/EditPermanentTaskScreen.tsx`
 
@@ -438,7 +442,7 @@ Copy `CreatePermanentTaskScreen.tsx` as the starting point. Key differences:
 
 ---
 
-### Step 3 — Wire into `MainNavigator`
+### Step 3 — Wire into `MainNavigator` ✅ DONE
 
 **File:** `app/navigation/MainNavigator.tsx`
 
@@ -514,7 +518,7 @@ case 'EditPermanentTask':
 
 ---
 
-### Step 4 — Storage: add `updateTemplateCategoryInInstances` (REQUIRED)
+### Step 4 — Storage: add `updateTemplateCategoryInInstances` (REQUIRED) ✅ DONE
 
 **File:** `app/core/services/storage/permanentTaskStorage.ts`
 
@@ -558,12 +562,12 @@ Note: synchronous (`runSync`) to match all other functions in this file.
 
 ## File Checklist
 
-| File | Change | Required? |
-|------|--------|-----------|
-| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Add `onEditTemplate` prop, ⋮ menu button per row, `handleDeleteTemplate` | YES |
-| `app/screens/tasks/EditPermanentTaskScreen.tsx` | **CREATE** — copy of Create screen, pre-populated, category-aware save | YES |
-| `app/navigation/MainNavigator.tsx` | Add `EditPermanentTask` overlay type, `editingTemplate` state, `handleEditTemplate` | YES |
-| `app/core/services/storage/permanentTaskStorage.ts` | Add `updateTemplateCategoryInInstances` function | YES — required for safe category changes |
+| File | Change | Status |
+|------|--------|--------|
+| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Add `onEditTemplate` prop, ⋮ menu button per row, `handleDeleteTemplate` | ✅ DONE |
+| `app/screens/tasks/EditPermanentTaskScreen.tsx` | **CREATE** — copy of Create screen, pre-populated, category-aware save | ✅ DONE |
+| `app/navigation/MainNavigator.tsx` | Add `EditPermanentTask` overlay type, `editingTemplate` state, `handleEditTemplate` | ✅ DONE |
+| `app/core/services/storage/permanentTaskStorage.ts` | Add `updateTemplateCategoryInInstances` function | ✅ DONE |
 
 ---
 

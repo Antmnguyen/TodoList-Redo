@@ -25,6 +25,9 @@ import { initializeCoreSchema } from './core';
 import { createPermanentTasksSchema } from './permanentTask';
 import { initializeCategoriesSchema } from './categories';
 import { initializeCompletionsSchema } from './completions';
+// App-level key-value store — no dependencies on other tables, so it can
+// safely be initialized last.
+import { initializeAppSettingsSchema } from './appSettings';
 
 /**
  * Initializes all active database schemas in dependency order.
@@ -47,6 +50,11 @@ export function initializeAllSchemas(): void {
     // Step 4: Completion event log (reads tasks + template_instances in backfill,
     //         so steps 1 and 2 must have completed before this runs)
     initializeCompletionsSchema();
+
+    // Step 5: App-level key-value settings store.
+    // No dependencies on any other table — always safe to run last.
+    // Current uses: midnight job last-run date gate (taskActions.runMidnightJob).
+    initializeAppSettingsSchema();
 
     console.log('✅ All active schemas initialized');
   } catch (error) {

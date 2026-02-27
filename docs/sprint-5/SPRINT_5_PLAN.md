@@ -1,7 +1,22 @@
 # Sprint 5 Plan: Polish & Usability
 
-**Status:** Planning
+**Status:** In Progress
 **Goal:** Professional UI overhaul and quality-of-life improvements
+
+---
+
+## Progress (as of 2026-02-27)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Template Management (edit/delete) | ✅ Complete | `EditPermanentTaskScreen`, ⋮ menu, `updateTemplateCategoryInInstances` |
+| Auto-Repeat Scheduling | ✅ Complete | `runMidnightJob` in `taskActions.ts`; real midnight date gate via `app_settings` SQLite table; see `midnight-job.md` |
+| Browse Screen | 🔄 In Progress | Sections added per commits |
+| Statistics | ✅ Complete (Sprint 4/5) | Stats screen wired to backend |
+| Completed Tasks Auto-Hide (2.1) | ⬜ Not Started | |
+| Task Archival System (2.4) | ⬜ Not Started | |
+| Animations | ⬜ Not Started | |
+| Theming / Design System | ⬜ Not Started | |
 
 ---
 
@@ -254,7 +269,26 @@ async function archiveCompletedTasks(): Promise<number> {
 }
 ```
 
-The job runs via a lightweight interval (e.g. `setInterval` on app resume, or a background task via `expo-background-fetch` if available). Exact scheduling TBD.
+#### Midnight Job — Unified Cleanup (ties into Auto-Repeat Scheduling)
+
+`archiveCompletedTasks` runs as part of a unified **midnight job** in `taskActions.ts`.
+The same midnight job also handles auto-repeat scheduling (see
+`permanant_tasks_editing/auto-repeat-scheduling.md`). All maintenance work happens together
+once per day on app start.
+
+```
+App starts
+  └── runMidnightJob()   ← AsyncStorage gate: "has midnight passed since last run?"
+        ├── autoFailOverdueTasks()          (existing — push overdue, log auto_failed)
+        ├── autoScheduleRecurringTasks()    (new — create next instances for auto-repeat templates)
+        └── archiveCompletedTasks()         (this feature — move completed tasks to task_archive)
+```
+
+**Timing gate:** `AsyncStorage` key `'lastMidnightJobAt'` stores the last run timestamp.
+On app start, compare vs today's 00:00:00.000. If `lastRun < todayMidnight` → run → update.
+
+This replaces the `setInterval` / `expo-background-fetch` approach. No background process
+needed — runs once per day on the first app open after midnight.
 
 #### Browse > Task History UI
 
@@ -284,7 +318,9 @@ TaskHistoryScreen
 **Requirements:**
 - [ ] `task_archive` table created in schema
 - [ ] `archivalService.ts` — `archiveCompletedTasks()` function
-- [ ] Archival job scheduled on app start (configurable interval, default daily)
+- [x] `runMidnightJob()` in `taskActions.ts` — unified midnight job calling autoFail + autoSchedule + archive (replaces standalone scheduling approach)
+- [x] `getLastCompletionTimestamp(templateId)` added to `statsStorage.ts` (read-only, needed by `autoScheduleRecurringTasks`)
+- [x] Dead auto-repeat block removed from `permanentTaskActions.handlePermanentCompletion`
 - [ ] Permanent task instances: write compressed record to `task_archive` (wasRecurring: true), then delete from `tasks` as normal — template_stats logic unchanged
 - [ ] `TaskHistoryScreen` in Browse with time filter (All / Today / Week / Month / Year)
 - [ ] History grouped by day, showing title + category name
@@ -292,7 +328,10 @@ TaskHistoryScreen
 
 **Files:**
 - [ ] `app/core/services/storage/schema/archive.ts` — `task_archive` table
-- [ ] `app/core/services/archivalService.ts` — archival logic + scheduling
+- [ ] `app/core/services/archivalService.ts` — archival logic (`archiveCompletedTasks`)
+- [ ] `app/core/domain/taskActions.ts` — `runMidnightJob`, `autoScheduleRecurringTasks`, `computeNextDueDate`
+- [ ] `app/core/services/storage/statsStorage.ts` — add `getLastCompletionTimestamp` (read-only)
+- [ ] `app/features/permanentTask/utils/permanentTaskActions.ts` — remove dead auto-repeat block
 - [ ] `app/screens/browse/TaskHistoryScreen.tsx` — history UI
 - [ ] `app/screens/browse/BrowseScreen.tsx` — add Task History entry
 - [ ] `app/core/services/storage/archiveStorage.ts` — read/write archive table
@@ -362,10 +401,10 @@ export const slideInRight = SlideInRight.duration(250);
 - [ ] Add "Task History" entry to BrowseScreen feature list
 
 ### Template Management
-- [ ] Add menu (⋮) to template items in UsePermanentTaskScreen
-- [ ] Create template edit functionality
-- [ ] Create template delete with confirmation
-- [ ] Update `permanentTaskStorage.ts` with update/delete functions
+- [x] Add menu (⋮) to template items in UsePermanentTaskScreen
+- [x] Create template edit functionality (`EditPermanentTaskScreen.tsx`)
+- [x] Create template delete with confirmation
+- [x] Update `permanentTaskStorage.ts` with update/delete functions (`updateTemplateCategoryInInstances`)
 
 ### Animations
 - [ ] Task complete animation
@@ -448,7 +487,7 @@ app/
 - [ ] Archived tasks are viewable in Browse > Task History, filterable by time range
 - [ ] Completed permanent task instances appear in Task History (wasRecurring: true), deleted from tasks table as normal, template_stats unaffected
 - [ ] Archive stores only compressed data (title, category, completedAt) — not full task objects
-- [ ] Users can manage permanent task templates
+- [x] Users can manage permanent task templates
 - [ ] Animations feel smooth and purposeful
 - [ ] Consistent spacing and typography
 - [ ] Works well in both light and dark modes

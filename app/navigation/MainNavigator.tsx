@@ -29,6 +29,7 @@ import { BrowseScreen } from '../screens/browse/BrowseScreen';
 import { CreateTaskScreen, CreateTaskFormData } from '../screens/tasks/CreateTaskScreen';
 import { CreatePermanentTaskScreen, PermanentTaskFormData } from '../screens/tasks/CreatePermanentTaskScreen';
 import { UsePermanentTaskScreen } from '../screens/tasks/UsePermanentTaskScreen';
+import { EditPermanentTaskScreen } from '../screens/tasks/EditPermanentTaskScreen';
 
 // Screens - Stat detail screens
 import { PermanentDetailScreen } from '../screens/stats/detail/PermanentDetailScreen';
@@ -56,7 +57,7 @@ type TabKey = 'tasks' | 'today' | 'stats' | 'browse';
  * 'StatDetail' covers all three detail screen types (template / category / all)
  * — the correct screen is chosen at render time based on statDetailParams.type.
  */
-type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask' | 'StatDetail';
+type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask' | 'EditPermanentTask' | 'StatDetail';
 
 // =============================================================================
 // TAB CONFIGURATION
@@ -99,6 +100,12 @@ export const MainNavigator: React.FC = () => {
    */
   const [statDetailParams, setStatDetailParams] = useState<StatDetailParams | null>(null);
 
+  /**
+   * The template being edited. Set when the user taps ⋮ → Edit on a template row.
+   * Null whenever overlayScreen !== 'EditPermanentTask'.
+   */
+  const [editingTemplate, setEditingTemplate] = useState<Task | null>(null);
+
   // ---------------------------------------------------------------------------
   // FAB Handlers
   // ---------------------------------------------------------------------------
@@ -106,10 +113,15 @@ export const MainNavigator: React.FC = () => {
   const handleUsePermanentTask = () => setOverlayScreen('UsePermanentTask');
   const handleCreatePermanentTask = () => setOverlayScreen('CreatePermanentTask');
 
+  const handleEditTemplate = (template: Task) => {
+    setEditingTemplate(template);
+    setOverlayScreen('EditPermanentTask');
+  };
+
   const goBack = () => {
     setOverlayScreen('none');
-    // Clear stat detail params so they don't persist across opens
     setStatDetailParams(null);
+    setEditingTemplate(null);
   };
 
   /**
@@ -192,6 +204,20 @@ export const MainNavigator: React.FC = () => {
         return (
           <UsePermanentTaskScreen
             onInstanceCreated={handleInstanceCreated}
+            onCancel={goBack}
+            onEditTemplate={handleEditTemplate}
+          />
+        );
+
+      case 'EditPermanentTask':
+        if (!editingTemplate) return null;
+        return (
+          <EditPermanentTaskScreen
+            template={editingTemplate}
+            onSave={() => {
+              setRefreshKey(prev => prev + 1);
+              goBack();
+            }}
             onCancel={goBack}
           />
         );

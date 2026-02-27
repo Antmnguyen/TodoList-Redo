@@ -981,6 +981,53 @@ export function getTodayRaw(): {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Scheduling support (read-only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the most recent `completed_at` timestamp (Unix ms) for a given
+ * template, or `null` if the template has never been completed.
+ *
+ * ## Why completion_log and not the tasks table?
+ *   The `tasks` table will eventually be pruned by the archival system (Sprint 5
+ *   §2.4), so a completed row might no longer be present there. `completion_log`
+ *   is append-only and is never cleaned up, making it the safe long-term source
+ *   of truth for "when was this last done?".
+ *
+ * ## Why only 'completed' outcome?
+ *   `completion_log` also stores 'auto_failed' rows (tasks that were missed and
+ *   pushed forward). We deliberately exclude those — an auto-fail is NOT a
+ *   real completion. Scheduling the next instance relative to an auto-fail would
+ *   mean "the user never actually did it, but we're scheduling the next one
+ *   anyway", which is wrong.
+ *
+ * ## Sync API
+ *   Matches the rest of this file — all queries use the expo-sqlite synchronous
+ *   `getAllSync` method so callers don't need to await or handle promises.
+ *
+ * Called exclusively by `taskActions.autoScheduleRecurringTasks()`.
+ *
+ * @param templateId - The `permanentId` of the template to look up
+ * @returns Latest `completed_at` ms timestamp, or null if never completed
+ */
+export function getLastCompletionTimestamp(templateId: string): number | null {
+  const rows = db.getAllSync<{ completed_at: number | null }>(
+    // MAX(completed_at) across all real completions for this template.
+    // Returns one row always: null if no matching rows exist.
+    `SELECT MAX(completed_at) AS completed_at
+     FROM completion_log
+     WHERE template_id = ?
+       AND outcome = 'completed'`,
+    [templateId],
+  );
+  // rows[0] always exists (MAX returns a row even with no matches), but
+  // completed_at will be null if there are no completions.
+  return rows.length > 0 && rows[0].completed_at != null
+    ? rows[0].completed_at
+    : null;
+}
+
 export function getPermanentTaskSummariesForCategory(
   categoryId: string,
   startDate?: string,

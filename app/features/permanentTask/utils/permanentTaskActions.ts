@@ -197,25 +197,6 @@ export async function handlePermanentCompletion(task: Task): Promise<Task> {
     completedAt: new Date(completedAt),
   });
 
-  // Auto-create next recurring instance if configured
-  if (permanentTask.autoRepeat) {
-    try {
-      const template = await getTemplateById(permanentTask.permanentId);
-      if (template) {
-        const nextInstance = createNextRecurringInstance(
-          template,
-          permanentTask.dueDate
-        );
-        // Inherit categoryId from template for recurring instances
-        nextInstance.categoryId = template.categoryId;
-        await savePermanentInstance(nextInstance);
-      }
-    } catch (error) {
-      console.warn('Failed to create next recurring instance:', error);
-      // Don't fail the completion if auto-repeat fails
-    }
-  }
-
   // Return as Task type
   return {
     ...task,

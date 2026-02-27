@@ -8,16 +8,22 @@ import {
   deleteTask,
   uncompleteTask,
   reassignTask,
-  autoFailOverdueTasks,
+  // runMidnightJob replaces the old autoFailOverdueTasks direct call.
+  // It runs autoFail first, then autoScheduleRecurringTasks, and in future
+  // will also run archiveCompletedTasks — all in the correct order.
+  runMidnightJob,
 } from '../domain/taskActions';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Auto-fail any overdue tasks, then load the fresh task list
+  // Run the midnight maintenance job (autoFail + autoSchedule), then load
+  // the task list so the UI always starts with an up-to-date, consistent view:
+  //   - overdue tasks already pushed forward
+  //   - new recurring instances already created if due
   useEffect(() => {
-    autoFailOverdueTasks().then(loadTasks);
+    runMidnightJob().then(loadTasks);
   }, []);
 
   async function loadTasks() {
