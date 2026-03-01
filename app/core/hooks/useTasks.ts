@@ -11,7 +11,10 @@ import {
   // runMidnightJob replaces the old autoFailOverdueTasks direct call.
   // It runs autoFail first, then autoScheduleRecurringTasks, and in future
   // will also run archiveCompletedTasks — all in the correct order.
-  runMidnightJob,
+  // runMidnightJob,  // ← PRODUCTION: uncomment this, remove runMidnightJobDev below
+  // ⚠️ DEV TESTING: runMidnightJobDev is active (3-min interval).
+  // TO REVERT: see taskActions.ts for full switch-back instructions.
+  runMidnightJobDev,
 } from '../domain/taskActions';
 
 export function useTasks() {
@@ -22,9 +25,32 @@ export function useTasks() {
   // the task list so the UI always starts with an up-to-date, consistent view:
   //   - overdue tasks already pushed forward
   //   - new recurring instances already created if due
+  //
+  // ═══════════════════════════════════════════════════════════════════════
+  // ⚠️  DEV TESTING MODE — 3-MINUTE INTERVAL (remove before production)
+  // ═══════════════════════════════════════════════════════════════════════
+  // Runs the full midnight job immediately on mount, then every 3 minutes,
+  // so the archival pipeline can be tested without waiting until midnight.
+  //
+  // TO SWITCH BACK TO PRODUCTION:
+  //   1. Delete this useEffect and its interval (keep the production one below).
+  //   2. Uncomment the production useEffect:
+  //        useEffect(() => { runMidnightJob().then(loadTasks); }, []);
+  //   3. Fix the import at the top of this file (see comment there).
+  // ═══════════════════════════════════════════════════════════════════════
   useEffect(() => {
-    runMidnightJob().then(loadTasks);
+    runMidnightJobDev().then(loadTasks);
+    const devIntervalId = setInterval(() => {
+      runMidnightJobDev().then(loadTasks);
+    }, 3 * 60 * 1000); // 3 minutes in ms
+    return () => clearInterval(devIntervalId);
   }, []);
+  // ═══════════════════════════════════════════════════════════════════════
+  // END DEV TESTING MODE — production useEffect below (currently commented out)
+  // ═══════════════════════════════════════════════════════════════════════
+  // useEffect(() => {
+  //   runMidnightJob().then(loadTasks);
+  // }, []);
 
   async function loadTasks() {
     setLoading(true);

@@ -28,6 +28,10 @@ import { initializeCompletionsSchema } from './completions';
 // App-level key-value store — no dependencies on other tables, so it can
 // safely be initialized last.
 import { initializeAppSettingsSchema } from './appSettings';
+// Task archive table — stores compressed records of completed tasks after they
+// are swept from the live tasks table by archiveCompletedTasks() (midnight job #3).
+// No dependencies on other tables — safe to run last.
+import { initializeArchiveSchema } from './archive';
 
 /**
  * Initializes all active database schemas in dependency order.
@@ -55,6 +59,12 @@ export function initializeAllSchemas(): void {
     // No dependencies on any other table — always safe to run last.
     // Current uses: midnight job last-run date gate (taskActions.runMidnightJob).
     initializeAppSettingsSchema();
+
+    // Step 6: Task archive table.
+    // Stores compressed snapshots of completed tasks after they are swept from
+    // the live tasks table by archiveCompletedTasks() (midnight job #3).
+    // No dependencies on any other table — safe to run last.
+    initializeArchiveSchema();
 
     console.log('✅ All active schemas initialized');
   } catch (error) {

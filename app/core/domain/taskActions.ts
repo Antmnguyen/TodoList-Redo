@@ -24,6 +24,7 @@ import { getAllTemplates } from '../services/storage/permanentTaskStorage';
 // Read/write the app_settings table so runMidnightJob can persist the last-run
 // date across cold starts without needing AsyncStorage.
 import { getAppSetting, setAppSetting } from '../services/storage/appSettingsStorage';
+import { archiveCompletedTasks } from '../services/archivalService';
 
 /**
  * UNIVERSAL TASK ACTIONS
@@ -534,7 +535,7 @@ export async function runMidnightJob(): Promise<void> {
   //    correct state (overdue tasks are still pending, just with a new date).
   await autoFailOverdueTasks();
   await autoScheduleRecurringTasks();
-  // Future: await archiveCompletedTasks();
+  await archiveCompletedTasks();
 
   // ── Persist the run date ────────────────────────────────────────────────
   // Written after jobs complete so that a crash mid-job causes a retry on
@@ -542,6 +543,37 @@ export async function runMidnightJob(): Promise<void> {
   // idempotent, so a retry is always safe.
   setAppSetting(MIDNIGHT_JOB_DATE_KEY, today);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ⚠️  DEV-ONLY TESTING FUNCTION — REMOVE BEFORE PRODUCTION
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// runMidnightJobDev bypasses ALL guards (session flag + calendar date gate)
+// and runs all three maintenance jobs unconditionally every time it is called.
+//
+// It is called on a 3-minute interval from useTasks.ts so the full midnight
+// job pipeline (autoFail → autoSchedule → archive) can be exercised without
+// waiting until midnight.
+//
+// ── HOW TO SWITCH BACK TO PRODUCTION (midnight-only) ─────────────────────
+//  STEP 1  Delete this entire function (everything between the ═══ banners).
+//  STEP 2  In app/core/hooks/useTasks.ts, replace the useEffect with:
+//
+//            useEffect(() => {
+//              runMidnightJob().then(loadTasks);
+//            }, []);
+//
+//  STEP 3  In useTasks.ts, remove the runMidnightJobDev import.
+//  STEP 4  Done — the production midnight-once-per-day job takes over.
+// ═══════════════════════════════════════════════════════════════════════════
+export async function runMidnightJobDev(): Promise<void> {
+  await autoFailOverdueTasks();
+  await autoScheduleRecurringTasks();
+  await archiveCompletedTasks();
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// END DEV-ONLY SECTION
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * FUTURE EXTENSION PATTERN
