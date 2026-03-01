@@ -1,41 +1,35 @@
-# ProductivityTracker 🚀
+# ProductivityTracker
 
-A high-performance, local-first task management application built with **React Native (Expo)** and **SQLite**. This app is designed for users who need a robust, offline-capable tool for managing recurring workflows and visualizing deep productivity insights.
+ProductivityTracker is a local-first task management application built with **React Native (Expo)** and **SQLite**. It is designed to manage recurring workflows through reusable task templates and provide visual feedback on completion trends.
 
 ---
 
-## 📲 Try the App (Android)
-Experience the app directly on your physical device. Scan the QR code below to download the production-ready APK.
+## Deployment (Android)
+The app is available as a production-ready APK for Android devices.
 
-| Scan to Download | Installation Steps |
+| Scan to Download | Installation |
 | :--- | :--- |
-| ![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=INSERT_YOUR_GITHUB_RELEASE_URL_HERE) | 1. Scan with your Android camera.<br>2. Download the `.apk` file.<br>3. Tap **Install** (Allow "Unknown Sources" if prompted). |
+| ![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=INSERT_YOUR_GITHUB_RELEASE_URL_HERE) | 1. Scan the QR code.<br>2. Download the `.apk` file.<br>3. Install the file (Enable "Unknown Sources" if prompted). |
 
 ---
 
-## 🛠️ Key Engineering Features
+## Functional Overview
 
-### 1. Intelligent Automation (The Midnight Job)
-The app features a sophisticated background maintenance pipeline that triggers on the first cold start of each calendar day.
-* **Auto-Scheduling:** Dynamically generates the next instance of recurring templates (Daily, Weekly, or Monthly) based on completion triggers.
-* **Auto-Fail Logic:** Incomplete tasks are automatically logged as "failed" in the stats engine at midnight to maintain data integrity.
-* **Automated Archival:** Offloads completed data from the active `tasks` table to a `task_archive` table to ensure the UI remains performant regardless of database size.
+### 1. Permanent Tasks
+The system centers on **Permanent Tasks**—reusable templates that eliminate the need to manually recreate standard routines.
+* **Template-to-Task Generation:** You define a task once as a Daily, Weekly, or Monthly template. The app automatically creates a new active task from that template at the start of each new period.
+* **Automated Status Updates:** When a new day begins, any tasks from the previous day that weren't checked off are moved to a "failed" status. This ensures the schedule stays current without manual cleanup.
+* **Data Migration:** Completed tasks are periodically moved from the active table into a dedicated archive. This keeps the primary list uncluttered and ensures the app remains responsive over long-term use.
 
-### 2. Relational Persistence (SQLite)
-Built on a full **SQLite** relational database via `expo-sqlite` rather than standard key-value storage.
-* **Data Integrity:** Implements foreign key relationships between Tasks, Templates, and Categories.
-* **Performance:** Synchronous data access for zero-lag transitions and full offline persistence.
-* **Append-Only Logging:** Uses a `completion_log` as the immutable source of truth for all productivity analytics.
-
-### 3. Data Visualization & Visual Identity
-A custom-built analytics engine provides deep insights into user habits:
-* **Visual Signals:** Every task card uses a dual-strip system ($5\text{px}$ for category color, $4\text{px}$ for recurring type) for instant recognition.
-* **Productivity Heatmaps:** Visualizes completion trends via calendar grids and bar graphs.
-* **Theme Engine:** Full manual and system-level Dark Mode support using a custom `ThemeContext`.
+### 2. Productivity Tracking & Stats
+The app uses a relational SQLite database to turn task history into visual metrics.
+* **Immutable Completion Logs:** Every time a task is completed or failed, it is recorded in a permanent log. This serves as the source of truth for all historical data.
+* **Data Visualization:** The app pulls from the log to generate calendar heatmaps and bar charts, showing exactly when tasks were finished and where gaps in consistency occur.
+* **Visual Identification:** Task cards use a dual-strip indicator system—color-coded by category and recurrence frequency—so you can distinguish between different types of work at a glance.
 
 ---
 
-## 🏗️ Technical Stack
+## Technical Stack
 * **Framework:** React Native / Expo (SDK 50+)
 * **Language:** TypeScript
 * **Database:** SQLite (`expo-sqlite`)
@@ -43,25 +37,23 @@ A custom-built analytics engine provides deep insights into user habits:
 
 ---
 
-## 🗺️ Project Roadmap
+## Project Status
 
 | Feature | Status |
 | :--- | :--- |
-| **Recurring Task Engine** | ✅ Shipped |
-| **SQLite Schema & Archival** | ✅ Shipped |
-| **Productivity Stats & Graphs** | ✅ Shipped |
-| **Location Geofencing** | 🏗️ In Progress |
-| **Google Calendar Sync** | 📅 Planned |
-| **Health Connect Integration** | 📅 Planned |
-| **Cross-Device Transfer** | 📅 Planned |
+| **Permanent Task Engine** | Completed |
+| **SQLite Archival System** | Completed |
+| **Productivity Visualization** | Completed |
+| **Location Geofencing** | In Progress |
+| **External Integrations** | Planned |
 
 ---
 
-## 📂 Project Structure
-* `app/core/domain/taskActions.ts` — Core business logic and Midnight Job pipeline.
-* `app/core/services/storage/` — SQLite schema definitions and archival services.
-* `app/screens/stats/` — Custom data visualization and graphing components.
-* `app/theme/` — Design tokens and Dark Mode implementation.
+## Directory Structure
+* `app/core/domain/taskActions.ts` — Logic for task instantiation and state transitions.
+* `app/core/services/storage/` — SQLite configuration and data migration logic.
+* `app/screens/stats/` — Components for rendering charts and heatmaps.
+* `app/theme/` — Theme providers and Dark Mode styling.
 
 ---
 *Snapshot generated 2026-03-01 · Sprint 5 Deployment*
