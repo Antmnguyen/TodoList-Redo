@@ -48,7 +48,8 @@ The app uses a relational SQLite database to turn task history into visual metri
 | **SQLite Archival System** | Completed |
 | **Productivity Visualization** | Completed |
 | **Location Geofencing** | In Progress |
-| **External Integrations** | Planned |
+| **Google Calendar Sync** | Planned |
+| **Health Connect Integration** | Planned |
 
 ---
 
@@ -60,5 +61,6 @@ The app uses a relational SQLite database to turn task history into visual metri
 
 ---
 *Snapshot generated 2026-03-01 · Sprint 5 Deployment*
+
 
 
