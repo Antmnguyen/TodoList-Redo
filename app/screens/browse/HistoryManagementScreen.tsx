@@ -293,7 +293,7 @@ function makeStyles(theme: AppTheme) {
       backgroundColor:   theme.bgCard,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
-      maxHeight:         60,
+      flexShrink:        0,
     },
     filterBarContent: {
       paddingHorizontal: 12,
