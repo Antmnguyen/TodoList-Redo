@@ -246,13 +246,13 @@ without competing:
 │ ▌▌ [✓] Task title                  [due date] ✕  │
 └──────────────────────────────────────────────────┘
   ││
-  │└── Category strip  (4 px) — category colour or theme.categoryStripNone
-  └─── Permanent strip (3 px) — theme.accentPermanent or transparent
+  │└── Permanent strip (4 px) — theme.accentPermanent or transparent
+  └─── Category strip  (5 px) — category colour or theme.categoryStripNone
 ```
 
-The permanent strip (3 px) sits outermost (flush to card edge) with
+The category strip (5 px) sits outermost (flush to card edge) with
 `borderTopLeftRadius: 8` / `borderBottomLeftRadius: 8` matching the card.
-The category strip (4 px) sits immediately to its right with `marginRight: 12`
+The permanent strip (4 px) sits immediately to its right with `marginRight: 12`
 to gap-separate from the checkbox.
 
 `overflow: 'hidden'` is intentionally **not** used on the container — it clips
@@ -269,7 +269,7 @@ on the checkbox and body inner Views.
 `renderTemplateItem` and `makeStyles` were updated with the same two strips:
 
 ```
-[ 3px perm strip | 4px cat strip ] [ template name + location + usage count ] [ ⋮ ] [ › ]
+[ 5px cat strip | 4px perm strip ] [ template name + location + usage count ] [ ⋮ ] [ › ]
 ```
 
 All template rows are permanent by definition, so the permanent strip is always
@@ -278,49 +278,43 @@ assigned category colour, or neutral grey if unassigned.
 
 ---
 
-## 3 — Permanent vs One-Off Visual Distinction
+## 3 — Permanent vs One-Off Visual Distinction ✅
 
 ### Goal
 At a glance the user can tell which tasks are one-off vs recurring (permanent).
-Two visual signals:
 
-| Element | One-Off | Permanent |
-|---------|---------|-----------|
-| Checkbox border + fill | Blue (`#007AFF`) | Purple (`#5856D6`) |
-| Type badge (optional) | _(none)_ | Small "↩" or "🔁" text badge next to title |
+### Actual Implementation — Two Signals, No Icon ✅
 
-### Checkbox colour
+The badge/icon approach described in the original plan was **not used**.
+Instead, permanent tasks are identified by two purely visual, icon-free signals:
 
-In `TaskItem`, the checkbox `borderColor` and `backgroundColor` (when checked)
-currently hardcode `#007AFF`. Change to:
+| Signal | One-Off | Permanent |
+|--------|---------|-----------|
+| Left-edge permanent strip (4 px, second from left) | `transparent` (invisible) | `theme.accentPermanent` (purple) |
+| Checkbox border + fill colour | `theme.checkboxBorderOneOff` (blue) | `theme.checkboxBorderPermanent` (purple) |
+
+The permanent strip is the primary at-a-glance identifier — it is always
+rendered at 3 px wide but is `transparent` for one-off tasks so the card
+layout never shifts. Purple means "this repeats".
+
+The checkbox colour change is the secondary signal, useful when the user is
+actively interacting with the checkbox rather than scanning the left edge.
 
 ```typescript
+// Checkbox — purple ring + fill for permanent, blue for one-off
 const checkboxColor = task.kind === 'permanent'
   ? theme.checkboxBorderPermanent
   : theme.checkboxBorderOneOff;
+
+// Left-edge strip — purple if permanent, transparent if one-off
+const permanentStripColor = task.kind === 'permanent'
+  ? theme.accentPermanent
+  : 'transparent';
 ```
 
-Apply `checkboxColor` to both `borderColor` (unchecked ring) and
-`backgroundColor` (checked fill).
-
-### Recurring badge
-
-Optionally render a small badge to the right of the task title:
-
-```tsx
-{task.kind === 'permanent' && (
-  <View style={styles.recurringBadge}>
-    <Text style={styles.recurringBadgeText}>↩</Text>
-  </View>
-)}
-```
-
-Badge style: small grey pill, `fontSize: 10`, `color: theme.accentPermanent`.
-Keeps the card clean — the checkbox colour alone is the primary signal;
-the badge is secondary and very small.
-
-Whether to include the badge is a design call — document it as optional here,
-implement it if it looks good in practice.
+Both signals are implemented in `TaskItem.tsx` and the template rows of
+`UsePermanentTaskScreen.tsx` (where the strip is always purple, since every
+row in that screen is a permanent template).
 
 ---
 
@@ -412,7 +406,7 @@ No change needed there — the colour dot is already the category's hex colour.
 |------|---------|--------|
 | `App.tsx` | Wrap with `<ThemeProvider>` | ✅ Done |
 | `app/screens/browse/BrowseScreen.tsx` | Theme tokens + Dark Mode toggle row (Switch) | ✅ Done |
-| `app/components/tasks/TaskItem.tsx` | Theme tokens — bgCard, text, checkbox (kind-aware), delete, completed opacity | ✅ Done |
+| `app/components/tasks/TaskItem.tsx` | Theme tokens — bgCard, text, checkbox (kind-aware), delete, completed opacity; two left-edge strips (permanent + category) | ✅ Done |
 | `app/components/navigation/TabBar.tsx` | Theme tokens — bg, border, active/inactive label colours | ✅ Done |
 | `app/navigation/MainNavigator.tsx` | Theme token for container bg | ✅ Done |
 | `app/screens/tasks/AllTasksScreen.tsx` | Theme tokens — bgScreen (header brand colour kept) | ✅ Done |
@@ -422,7 +416,7 @@ No change needed there — the colour dot is already the category's hex colour.
 | `app/screens/tasks/CreateTaskScreen.tsx` | Theme tokens — all surfaces, inputs, buttons | ✅ Done |
 | `app/screens/tasks/CreatePermanentTaskScreen.tsx` | Theme tokens — all surfaces, inputs, switches | ✅ Done |
 | `app/screens/tasks/EditPermanentTaskScreen.tsx` | Theme tokens — mirrors CreatePermanentTask | ✅ Done |
-| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Theme tokens, debug bg removed from header buttons | ✅ Done |
+| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Theme tokens, debug bg removed from header buttons; two left-edge strips on template rows | ✅ Done |
 | `app/screens/stats/detail/OverallDetailScreen.tsx` | bgScreen container | ✅ Done |
 | `app/screens/stats/detail/PermanentDetailScreen.tsx` | bgScreen container | ✅ Done |
 | `app/screens/stats/detail/CategoryDetailScreen.tsx` | bgScreen container | ✅ Done |
@@ -453,15 +447,17 @@ No change needed there — the colour dot is already the category's hex colour.
 | `app/components/stats/detail/category/PermanentTaskListCard.tsx` | ✅ Done |
 | `app/components/stats/detail/shared/DetailHeader.tsx` | ✅ No change needed (brand colour bg + white text) |
 
-### Modified Files — Category Colour Strip (Pillar 2, not started)
+### Modified Files — Category Colour Strip + Permanent Identity (Pillars 2 & 3) ✅
 
 | File | Changes | Status |
 |------|---------|--------|
-| `app/core/types/task.ts` | Add `categoryColor?: string` | ⏳ Planned |
-| `app/core/services/storage/taskStorage.ts` | JOIN categories, map `categoryColor` | ⏳ Planned |
-| `app/features/permanentTask/utils/permanentTaskActions.ts` | JOIN categories on template load | ⏳ Planned |
-| `app/components/tasks/TaskItem.tsx` | 4px left colour strip | ⏳ Planned |
-| `app/screens/tasks/UsePermanentTaskScreen.tsx` | 4px left colour strip on template rows | ⏳ Planned |
+| `app/core/types/task.ts` | Added `categoryColor?: string` | ✅ Done |
+| `app/features/permanentTask/types/permanentTask.ts` | Added `categoryColor?: string` | ✅ Done |
+| `app/core/services/storage/taskStorage.ts` | `getAllTasks()` LEFT JOINs categories, maps `category_color → categoryColor` | ✅ Done |
+| `app/core/services/storage/permanentTaskStorage.ts` | `getAllTemplates()` LEFT JOINs categories, maps `category_color → categoryColor` | ✅ Done |
+| `app/features/permanentTask/utils/permanentTaskActions.ts` | `getAllPermanentTemplates()` passes `categoryColor` through to returned `Task[]` | ✅ Done |
+| `app/components/tasks/TaskItem.tsx` | Two left-edge strips: 3 px permanent indicator + 4 px category colour; `alignItems: 'stretch'`; no `paddingLeft` on container | ✅ Done |
+| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Same two strips on template rows; `makeStyles` updated with `permanentStrip` + `categoryStrip` | ✅ Done |
 
 ---
 
@@ -489,9 +485,13 @@ No change needed there — the colour dot is already the category's hex colour.
 ### Dark mode — remaining ⏳
 18. Manual test: toggle Dark Mode in Browse, verify every screen re-skins correctly
 
-### Category colour strips (Pillar 2) — after dark mode is complete
-- Add `categoryColor` to Task type + storage JOIN
-- Add 4px strip to TaskItem and template rows
+### Category colour strips + permanent identity (Pillars 2 & 3) — completed steps ✅
+18. `task.ts`, `permanentTask.ts` — added `categoryColor?: string` to both type interfaces
+19. `taskStorage.ts` — `getAllTasks()` LEFT JOINs categories to denormalise `category_color`
+20. `permanentTaskStorage.ts` — `getAllTemplates()` LEFT JOINs categories the same way
+21. `permanentTaskActions.ts` — `getAllPermanentTemplates()` passes `categoryColor` through
+22. `TaskItem.tsx` — two left-edge strips (3 px permanent + 4 px category); container restructured to `alignItems: 'stretch'`, no `paddingLeft`; badge/icon approach replaced with strip
+23. `UsePermanentTaskScreen.tsx` — same strip pair on template rows; permanent strip always purple since all rows are templates
 
 ---
 

@@ -8,49 +8,38 @@ import {
   deleteTask,
   uncompleteTask,
   reassignTask,
-  // runMidnightJob replaces the old autoFailOverdueTasks direct call.
-  // It runs autoFail first, then autoScheduleRecurringTasks, and in future
-  // will also run archiveCompletedTasks — all in the correct order.
-  // runMidnightJob,  // ← PRODUCTION: uncomment this, remove runMidnightJobDev below
-  // ⚠️ DEV TESTING: runMidnightJobDev is active (3-min interval).
-  // TO REVERT: see taskActions.ts for full switch-back instructions.
-  runMidnightJobDev,
+  // Production: runs once per calendar day (guarded by SQLite date gate +
+  // in-session flag). Order: autoFail → autoSchedule → archive.
+  runMidnightJob,
+  // DEV TESTING: uncomment runMidnightJobDev and swap the useEffect below
+  // to re-enable the 3-minute interval pipeline for local testing.
+  // runMidnightJobDev,
 } from '../domain/taskActions';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Run the midnight maintenance job (autoFail + autoSchedule), then load
-  // the task list so the UI always starts with an up-to-date, consistent view:
-  //   - overdue tasks already pushed forward
-  //   - new recurring instances already created if due
-  //
-  // ═══════════════════════════════════════════════════════════════════════
-  // ⚠️  DEV TESTING MODE — 3-MINUTE INTERVAL (remove before production)
-  // ═══════════════════════════════════════════════════════════════════════
-  // Runs the full midnight job immediately on mount, then every 3 minutes,
-  // so the archival pipeline can be tested without waiting until midnight.
-  //
-  // TO SWITCH BACK TO PRODUCTION:
-  //   1. Delete this useEffect and its interval (keep the production one below).
-  //   2. Uncomment the production useEffect:
-  //        useEffect(() => { runMidnightJob().then(loadTasks); }, []);
-  //   3. Fix the import at the top of this file (see comment there).
-  // ═══════════════════════════════════════════════════════════════════════
+  // Run the midnight maintenance job (autoFail → autoSchedule → archive),
+  // then load the task list so the UI starts with an up-to-date view.
+  // The job is guarded to run at most once per calendar day.
   useEffect(() => {
-    runMidnightJobDev().then(loadTasks);
-    const devIntervalId = setInterval(() => {
-      runMidnightJobDev().then(loadTasks);
-    }, 3 * 60 * 1000); // 3 minutes in ms
-    return () => clearInterval(devIntervalId);
+    runMidnightJob().then(loadTasks);
   }, []);
-  // ═══════════════════════════════════════════════════════════════════════
-  // END DEV TESTING MODE — production useEffect below (currently commented out)
-  // ═══════════════════════════════════════════════════════════════════════
+
+  // ── DEV TESTING MODE (3-minute interval) ─────────────────────────────────
+  // Uncomment the block below (and comment out the production useEffect above)
+  // to run the full pipeline every 3 minutes for local testing.
+  // Also uncomment the runMidnightJobDev import at the top of this file.
+  //
   // useEffect(() => {
-  //   runMidnightJob().then(loadTasks);
+  //   runMidnightJobDev().then(loadTasks);
+  //   const devIntervalId = setInterval(() => {
+  //     runMidnightJobDev().then(loadTasks);
+  //   }, 3 * 60 * 1000); // 3 minutes in ms
+  //   return () => clearInterval(devIntervalId);
   // }, []);
+  // ── END DEV TESTING MODE ─────────────────────────────────────────────────
 
   async function loadTasks() {
     setLoading(true);

@@ -17,13 +17,13 @@
 //   │ ▌▌ [✓] Task title          [due date] ✕ │
 //   └─────────────────────────────────────────┘
 //    ││
-//    │└─ Category strip (4 px)
-//    │     • Category colour   if task has a category
-//    │     • theme.categoryStripNone (grey)   otherwise
+//    │└─ Permanent strip (4 px)
+//    │     • theme.accentPermanent (purple)  if task.kind === 'permanent'
+//    │     • transparent                     if task is a one-off
 //    │
-//    └── Permanent strip (3 px)
-//          • theme.accentPermanent (purple)  if task.kind === 'permanent'
-//          • transparent                     if task is a one-off
+//    └── Category strip (5 px) — leftmost, flush to card edge
+//          • Category colour   if task has a category
+//          • theme.categoryStripNone (grey)   otherwise
 //
 // The permanent strip always occupies its 3 px slot; it is just transparent
 // for one-off tasks so the card width never shifts.
@@ -93,20 +93,21 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, on
     <View style={[styles.container, task.completed && styles.containerCompleted]}>
 
       {/* ------------------------------------------------------------------
-          PERMANENT INDICATOR STRIP (3 px)
-          Always rendered; transparent for one-off tasks so card width is
-          stable regardless of task kind.
-          borderTopLeftRadius + borderBottomLeftRadius match the card's own
-          borderRadius so the strip appears naturally clipped to the corner.
-         ------------------------------------------------------------------ */}
-      <View style={[styles.permanentStrip, { backgroundColor: permanentStripColor }]} />
-
-      {/* ------------------------------------------------------------------
-          CATEGORY COLOUR STRIP (4 px)
-          Shows the category's brand colour, or neutral grey if uncategorised.
-          marginRight creates the gap between the strips and the checkbox.
+          CATEGORY COLOUR STRIP (5 px)
+          Leftmost strip — shows the category's brand colour, or neutral grey
+          if uncategorised. borderTopLeftRadius + borderBottomLeftRadius match
+          the card's own borderRadius so the strip appears naturally clipped.
          ------------------------------------------------------------------ */}
       <View style={[styles.categoryStrip, { backgroundColor: categoryStripColor }]} />
+
+      {/* ------------------------------------------------------------------
+          PERMANENT INDICATOR STRIP (4 px)
+          Sits immediately to the right of the category strip.
+          Always rendered; transparent for one-off tasks so card width is
+          stable regardless of task kind.
+          marginRight creates the gap between the strips and the checkbox.
+         ------------------------------------------------------------------ */}
+      <View style={[styles.permanentStrip, { backgroundColor: permanentStripColor }]} />
 
       {/* ------------------------------------------------------------------
           CHECKBOX — tap to toggle completion
@@ -234,23 +235,20 @@ function makeStyles(theme: AppTheme) {
     // Both strips use alignSelf: 'stretch' so they grow to the full card
     // height regardless of how tall the content area is.
 
-    permanentStrip: {
-      // 3 px wide — narrower than the category strip; together they read as
-      // a two-colour band, not a single wide bar.
-      width:                 3,
-      alignSelf:             'stretch',
-      // Round the top-left and bottom-left corners to follow the card's
-      // own borderRadius: 8, so the strip looks naturally inset.
+    categoryStrip: {
+      // 5 px wide — leftmost strip, the primary category colour signal.
+      // Rounded left corners follow the card's own borderRadius: 8.
+      width:                  7,
+      alignSelf:              'stretch',
       borderTopLeftRadius:    8,
       borderBottomLeftRadius: 8,
-      // No marginRight — the two strips are adjacent with no gap.
     },
-    categoryStrip: {
-      // 4 px wide — slightly wider than the permanent strip so the category
-      // colour is the more prominent of the two signals.
-      width:      4,
-      alignSelf:  'stretch',
-      // Gap between the strips and the checkbox area.
+    permanentStrip: {
+      // 4 px wide — sits to the right of the category strip.
+      // No border radius — the category strip covers the card corner.
+      // marginRight creates the gap between the strips and the checkbox.
+      width:       7,
+      alignSelf:   'stretch',
       marginRight: 12,
     },
 

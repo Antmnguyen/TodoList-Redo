@@ -174,27 +174,28 @@ export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = (
       {/* -----------------------------------------------------------------------
           FILTER TAB BAR
          ----------------------------------------------------------------------- */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterBar}
-        contentContainerStyle={styles.filterBarContent}
-      >
-        {FILTER_TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.filterTab, activeFilter === tab && styles.filterTabActive]}
-            onPress={() => setActiveFilter(tab)}
-          >
-            <Text style={[
-              styles.filterTabText,
-              activeFilter === tab && styles.filterTabTextActive,
-            ]}>
-              {FILTER_LABELS[tab]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.filterBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterBarContent}
+        >
+          {FILTER_TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.filterTab, activeFilter === tab && styles.filterTabActive]}
+              onPress={() => setActiveFilter(tab)}
+            >
+              <Text style={[
+                styles.filterTabText,
+                activeFilter === tab && styles.filterTabTextActive,
+              ]}>
+                {FILTER_LABELS[tab]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* -----------------------------------------------------------------------
           CONTENT — section list or empty state
@@ -290,20 +291,20 @@ function makeStyles(theme: AppTheme) {
 
     // ── Filter tab bar ───────────────────────────────────────────────────────────
     filterBar: {
+      height:            48,
       backgroundColor:   theme.bgCard,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
-      flexShrink:        0,
     },
     filterBarContent: {
       paddingHorizontal: 12,
-      paddingVertical:   10,
+      paddingVertical:   5,
       gap:               8,
       flexDirection:     'row',
     },
     filterTab: {
       paddingHorizontal: 14,
-      paddingVertical:   8,
+      paddingVertical:   5,
       borderRadius:      16,
       backgroundColor:   theme.bgInput,
     },

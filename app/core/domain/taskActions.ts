@@ -545,26 +545,29 @@ export async function runMidnightJob(): Promise<void> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ⚠️  DEV-ONLY TESTING FUNCTION — REMOVE BEFORE PRODUCTION
+// DEV TESTING FUNCTION — kept for local testing, currently inactive
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // runMidnightJobDev bypasses ALL guards (session flag + calendar date gate)
 // and runs all three maintenance jobs unconditionally every time it is called.
 //
-// It is called on a 3-minute interval from useTasks.ts so the full midnight
-// job pipeline (autoFail → autoSchedule → archive) can be exercised without
-// waiting until midnight.
+// Use this when you need to exercise the full pipeline (autoFail →
+// autoSchedule → archive) without waiting until midnight or clearing the
+// SQLite date gate manually.
 //
-// ── HOW TO SWITCH BACK TO PRODUCTION (midnight-only) ─────────────────────
-//  STEP 1  Delete this entire function (everything between the ═══ banners).
-//  STEP 2  In app/core/hooks/useTasks.ts, replace the useEffect with:
+// ── HOW TO RE-ENABLE FOR DEV TESTING ────────────────────────────────────
+//  STEP 1  In app/core/hooks/useTasks.ts, comment out the production
+//          useEffect and uncomment the dev useEffect block below it.
+//  STEP 2  In useTasks.ts, uncomment the runMidnightJobDev import.
+//  STEP 3  The pipeline will now run immediately on mount, then every
+//          3 minutes, so you can observe archival / scheduling behaviour
+//          without a real overnight gap.
 //
-//            useEffect(() => {
-//              runMidnightJob().then(loadTasks);
-//            }, []);
-//
-//  STEP 3  In useTasks.ts, remove the runMidnightJobDev import.
-//  STEP 4  Done — the production midnight-once-per-day job takes over.
+// ── HOW TO SWITCH BACK TO PRODUCTION ────────────────────────────────────
+//  STEP 1  In useTasks.ts, restore the production useEffect
+//          (runMidnightJob, no interval) and comment out the dev block.
+//  STEP 2  In useTasks.ts, comment out the runMidnightJobDev import.
+//  STEP 3  Done — the once-per-calendar-day guard takes over.
 // ═══════════════════════════════════════════════════════════════════════════
 export async function runMidnightJobDev(): Promise<void> {
   await autoFailOverdueTasks();
@@ -572,7 +575,7 @@ export async function runMidnightJobDev(): Promise<void> {
   await archiveCompletedTasks();
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// END DEV-ONLY SECTION
+// END DEV TESTING SECTION
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**

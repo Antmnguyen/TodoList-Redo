@@ -267,20 +267,21 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
       >
 
         {/* ----------------------------------------------------------------
-            PERMANENT INDICATOR STRIP (3 px)
-            Always purple for template rows — all items here are permanent.
+            CATEGORY COLOUR STRIP (5 px)
+            Leftmost strip — shows the template's category colour, or neutral
+            grey when no category has been assigned.
             borderTopLeftRadius / borderBottomLeftRadius match the row's
-            overflow so the strip appears flush with the row's left edge.
-           ---------------------------------------------------------------- */}
-        <View style={[styles.permanentStrip, { backgroundColor: permanentStripColor }]} />
-
-        {/* ----------------------------------------------------------------
-            CATEGORY COLOUR STRIP (4 px)
-            Shows the template's category colour, or neutral grey when no
-            category has been assigned.  marginRight creates the gap between
-            the strips and the template content area.
+            implied shape so the strip appears flush with the left edge.
            ---------------------------------------------------------------- */}
         <View style={[styles.categoryStrip, { backgroundColor: categoryStripColor }]} />
+
+        {/* ----------------------------------------------------------------
+            PERMANENT INDICATOR STRIP (4 px)
+            Sits immediately to the right of the category strip.
+            Always purple here — all rows in this screen are templates.
+            marginRight creates the gap between the strips and the content.
+           ---------------------------------------------------------------- */}
+        <View style={[styles.permanentStrip, { backgroundColor: permanentStripColor }]} />
 
         {/* ----------------------------------------------------------------
             TEMPLATE CONTENT — title, optional location, usage count
@@ -519,7 +520,8 @@ function makeStyles(theme: AppTheme) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingTop: 50,
+      paddingBottom: 12,
       backgroundColor: theme.bgCard,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.hairline,
@@ -615,20 +617,19 @@ function makeStyles(theme: AppTheme) {
     // Mirror the same strip pattern used in TaskItem so template rows and
     // active task cards feel visually consistent.
 
-    permanentStrip: {
-      // 3 px — narrower strip for the permanent/type indicator (always purple
-      // in this screen since every row is a template).
-      width:                  3,
+    categoryStrip: {
+      // 5 px — leftmost strip, category colour is the primary signal.
+      // Rounded left corners follow the row's implied shape.
+      width:                  5,
       alignSelf:              'stretch',
-      // Round only the left corners to follow the list row's implied shape.
       borderTopLeftRadius:    8,
       borderBottomLeftRadius: 8,
     },
-    categoryStrip: {
-      // 4 px — slightly wider so category colour is the dominant signal.
+    permanentStrip: {
+      // 4 px — permanent indicator, always purple in this screen.
+      // Sits right of category strip; marginRight gaps to content.
       width:       4,
       alignSelf:   'stretch',
-      // Gap between the strips and the template text content.
       marginRight: 12,
     },
 
