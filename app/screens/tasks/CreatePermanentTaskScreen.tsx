@@ -3,30 +3,17 @@
 // CREATE PERMANENT TASK SCREEN
 // =============================================================================
 //
-// Screen for creating a new permanent task template.
-// Follows the architecture: screens use hooks for data, render components for UI.
+// WHAT IS A "PERMANENT TASK TEMPLATE"?
+//   A permanent task template is a reusable blueprint for a task you do
+//   repeatedly — like "Morning Workout" or "Weekly Review". You create the
+//   template once here, and then every time you want to do that task you use
+//   UsePermanentTaskScreen to stamp out a new instance from the blueprint,
+//   choosing a due date each time. Think of it like a recipe card you can
+//   cook from over and over.
 //
-// PERMANENT TASK TEMPLATE FIELDS (from permanentTask.ts):
-// - templateTitle (required): Name of the template
-// - location (optional): Location associated with the task
-// - autoRepeat (optional): Auto-repeat configuration (expandable later)
-//
-// Auto-generated fields (handled by backend/factory):
-// - id, permanentId, isTemplate, createdAt, instanceCount
-//
-// DESIGN DECISIONS:
-// 1. Form state is local to this screen (not in a hook) since it's UI state
-// 2. handleSave calls taskActions.createTask() which routes to permanentTaskActions
-// 3. Each input section is separated for easy expansion
-// 4. Optional fields are in collapsible/expandable sections
-//
-// TODO:
-// - Add taskType to PermanentTask type and storage (requires restructuring)
-// - Add navigation back to previous screen after save
-// - Add loading state during save
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -41,13 +28,13 @@ import {
 import { createTask } from '../../core/domain/taskActions';
 import { useCategories, Category } from '../../features/categories';
 import { CategorySelector } from '../../components/categories/CategorySelector';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-// Form data structure - mirrors PermanentTask template fields
-// This will be passed to the backend when saving
 export interface PermanentTaskFormData {
   templateTitle: string;
   categoryId?: string;
@@ -55,14 +42,11 @@ export interface PermanentTaskFormData {
   autoRepeat?: {
     enabled: boolean;
     frequency?: 'daily' | 'weekly' | 'monthly';
-    // Expandable: add more auto-repeat options here later
   };
 }
 
 export interface CreatePermanentTaskScreenProps {
-  // Called when user saves the form - will connect to backend later
   onSave?: (data: PermanentTaskFormData) => void;
-  // Called when user cancels/goes back
   onCancel?: () => void;
 }
 
@@ -74,53 +58,30 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
   onSave,
   onCancel,
 }) => {
-  // =========================================================================
-  // HOOKS
-  // =========================================================================
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  // Load categories from storage
   const { categories, loading: categoriesLoading } = useCategories();
 
-  // =========================================================================
-  // FORM STATE
-  // =========================================================================
-
-  // Required fields
   const [templateTitle, setTemplateTitle] = useState('');
-
-  // Category selection (optional but recommended)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-
-  // Optional fields
   const [location, setLocation] = useState('');
-
-  // Auto-repeat configuration (optional, expandable)
   const [autoRepeatEnabled, setAutoRepeatEnabled] = useState(false);
   const [autoRepeatFrequency, setAutoRepeatFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-
-  // UI state for showing/hiding optional sections
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showAutoRepeatOptions, setShowAutoRepeatOptions] = useState(false);
 
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-
-  // Validate and collect form data
   const handleSave = async () => {
-    // Validate required fields
     if (!templateTitle.trim()) {
       Alert.alert('Required Field', 'Please enter a template title');
       return;
     }
 
-    // Build form data object
     const formData: PermanentTaskFormData = {
       templateTitle: templateTitle.trim(),
       categoryId: selectedCategory?.id,
     };
 
-    // Add optional fields if provided
     if (location.trim()) {
       formData.location = location.trim();
     }
@@ -133,21 +94,18 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
     }
 
     try {
-      // Create the permanent task template via taskActions
       const newTemplate = await createTask(
         formData.templateTitle,
         'permanent',
         {
-          //templateTitle: formData.templateTitle,
           location: formData.location ? { lat: 0, lng: 0, name: formData.location } : undefined,
-          recurring: formData.autoRepeat,            
+          recurring: formData.autoRepeat,
           categoryId: formData.categoryId,
         }
       );
 
       console.log('Permanent Task Template Created:', newTemplate);
 
-      // Call onSave callback with form data
       if (onSave) {
         onSave(formData);
       } else {
@@ -167,13 +125,10 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
     onCancel?.();
   };
 
-  // =========================================================================
-  // RENDER
-  // =========================================================================
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+
+      {/* HEADER BAR */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
           <Text style={styles.headerButtonText}>Cancel</Text>
@@ -185,15 +140,14 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
       </View>
 
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        {/* =============================================================== */}
-        {/* REQUIRED: Template Title */}
-        {/* =============================================================== */}
+
+        {/* SECTION 1: TEMPLATE TITLE */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Template Title *</Text>
           <TextInput
             style={styles.textInput}
             placeholder="e.g., Morning Workout, Weekly Review"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.textDisabled}
             value={templateTitle}
             onChangeText={setTemplateTitle}
             autoFocus
@@ -203,10 +157,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
           </Text>
         </View>
 
-        {/* =============================================================== */}
-        {/* CATEGORY SELECTOR */}
-        {/* Reusable component shared with CreateTaskScreen                 */}
-        {/* =============================================================== */}
+        {/* SECTION 2: CATEGORY SELECTOR */}
         <CategorySelector
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
@@ -214,9 +165,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
           loading={categoriesLoading}
         />
 
-        {/* =============================================================== */}
-        {/* OPTIONAL: Location */}
-        {/* =============================================================== */}
+        {/* SECTION 3: LOCATION (collapsible) */}
         <TouchableOpacity
           style={styles.optionalHeader}
           onPress={() => setShowLocationInput(!showLocationInput)}
@@ -230,7 +179,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
             <TextInput
               style={styles.textInput}
               placeholder="e.g., Home, Gym, Office"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textDisabled}
               value={location}
               onChangeText={setLocation}
             />
@@ -240,9 +189,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
           </View>
         )}
 
-        {/* =============================================================== */}
-        {/* OPTIONAL: Auto-Repeat Configuration */}
-        {/* =============================================================== */}
+        {/* SECTION 4: AUTO-REPEAT (collapsible) */}
         <TouchableOpacity
           style={styles.optionalHeader}
           onPress={() => setShowAutoRepeatOptions(!showAutoRepeatOptions)}
@@ -253,18 +200,16 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
 
         {showAutoRepeatOptions && (
           <View style={styles.section}>
-            {/* Enable/Disable Toggle */}
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Enable Auto-Repeat</Text>
               <Switch
                 value={autoRepeatEnabled}
                 onValueChange={setAutoRepeatEnabled}
-                trackColor={{ false: '#ddd', true: '#007AFF' }}
+                trackColor={{ false: theme.border, true: theme.accent }}
                 thumbColor="#fff"
               />
             </View>
 
-            {/* Frequency Selection (only shown if enabled) */}
             {autoRepeatEnabled && (
               <View style={styles.frequencyContainer}>
                 <Text style={styles.frequencyLabel}>Repeat Frequency:</Text>
@@ -298,13 +243,6 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
           </View>
         )}
 
-        {/* =============================================================== */}
-        {/* FUTURE EXPANSION SECTIONS */}
-        {/* Add more optional sections here as features are added */}
-        {/* Examples: Priority, Category, Subtasks, Reminders, etc. */}
-        {/* =============================================================== */}
-
-        {/* Spacer at bottom for scroll */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -315,149 +253,144 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
 
-  // Header styles
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-  },
-  headerButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  headerButtonText: {
-    fontSize: 17,
-    color: '#007AFF',
-  },
-  saveButton: {
-    fontWeight: '600',
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 50,
+      paddingBottom: 12,
+      backgroundColor: theme.bgCard,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    headerButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    headerButtonText: {
+      fontSize: 17,
+      color: theme.accent,
+    },
+    saveButton: {
+      fontWeight: '600',
+    },
 
-  // Content area
-  content: {
-    flex: 1,
-  },
+    content: {
+      flex: 1,
+    },
 
-  // Section styles (for each input group)
-  section: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 1,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    section: {
+      backgroundColor: theme.bgSection,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 1,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
 
-  // Text input styles
-  textInput: {
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  helperText: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 8,
-  },
+    textInput: {
+      fontSize: 16,
+      color: theme.textPrimary,
+      backgroundColor: theme.bgInput,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    helperText: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      marginTop: 8,
+    },
 
-  // Optional section header (expandable)
-  optionalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#ddd',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  optionalHeaderText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  expandIcon: {
-    fontSize: 20,
-    color: '#007AFF',
-    fontWeight: '300',
-  },
+    optionalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.bgCard,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      marginTop: 16,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.hairline,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    optionalHeaderText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    expandIcon: {
+      fontSize: 20,
+      color: theme.accent,
+      fontWeight: '300',
+    },
 
-  // Switch row (for toggles)
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  switchLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    switchLabel: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
 
-  // Frequency selection
-  frequencyContainer: {
-    marginTop: 16,
-  },
-  frequencyLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  frequencyOptions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  frequencyOption: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  frequencyOptionSelected: {
-    backgroundColor: '#007AFF',
-  },
-  frequencyOptionText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  frequencyOptionTextSelected: {
-    color: '#fff',
-  },
+    frequencyContainer: {
+      marginTop: 16,
+    },
+    frequencyLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    frequencyOptions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    frequencyOption: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: theme.bgInput,
+      alignItems: 'center',
+    },
+    frequencyOptionSelected: {
+      backgroundColor: theme.accent,
+    },
+    frequencyOptionText: {
+      fontSize: 14,
+      color: theme.textPrimary,
+      fontWeight: '500',
+    },
+    frequencyOptionTextSelected: {
+      color: '#fff',
+    },
 
-  // Bottom spacer for scroll padding
-  bottomSpacer: {
-    height: 40,
-  },
-});
+    bottomSpacer: {
+      height: 40,
+    },
+  });
+}

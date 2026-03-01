@@ -24,6 +24,7 @@ export interface Task {
   priority?: 'low' | 'medium' | 'high';
   category?: string;      // Legacy - display name
   categoryId?: string;    // Foreign key to categories table
+  categoryColor?: string; // Denormalised from categories table at load time
   dueDate?: Date;
   completedAt?: Date;     // When task was marked complete (for stats)
   startDate?: Date; // Hidden until start date

@@ -38,5 +38,22 @@ export function initializeCoreSchema(): void {
     // Column already exists, ignore
   }
 
+  // ── Indexes ──────────────────────────────────────────────────────────────
+  // These indexes cover the two columns most frequently used by stats queries
+  // that still hit the tasks table (e.g. categoryStorage.getCategoryStats).
+  //
+  //   idx_tasks_completed_at  — range queries on the completion timestamp
+  //                             (e.g. "completions this week/month/year").
+  //   idx_tasks_category_id   — equality filter for per-category task counts.
+  //
+  // Both use IF NOT EXISTS so this block is safe to run on every launch.
+  db.execSync(`
+    CREATE INDEX IF NOT EXISTS idx_tasks_completed_at
+      ON tasks (completed_at);
+
+    CREATE INDEX IF NOT EXISTS idx_tasks_category_id
+      ON tasks (category_id);
+  `);
+
   console.log('✅ Core tasks table created');
 }

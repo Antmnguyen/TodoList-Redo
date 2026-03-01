@@ -8,16 +8,38 @@ import {
   deleteTask,
   uncompleteTask,
   reassignTask,
+  // Production: runs once per calendar day (guarded by SQLite date gate +
+  // in-session flag). Order: autoFail → autoSchedule → archive.
+  runMidnightJob,
+  // DEV TESTING: uncomment runMidnightJobDev and swap the useEffect below
+  // to re-enable the 3-minute interval pipeline for local testing.
+  // runMidnightJobDev,
 } from '../domain/taskActions';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load tasks on mount
+  // Run the midnight maintenance job (autoFail → autoSchedule → archive),
+  // then load the task list so the UI starts with an up-to-date view.
+  // The job is guarded to run at most once per calendar day.
   useEffect(() => {
-    loadTasks();
+    runMidnightJob().then(loadTasks);
   }, []);
+
+  // ── DEV TESTING MODE (3-minute interval) ─────────────────────────────────
+  // Uncomment the block below (and comment out the production useEffect above)
+  // to run the full pipeline every 3 minutes for local testing.
+  // Also uncomment the runMidnightJobDev import at the top of this file.
+  //
+  // useEffect(() => {
+  //   runMidnightJobDev().then(loadTasks);
+  //   const devIntervalId = setInterval(() => {
+  //     runMidnightJobDev().then(loadTasks);
+  //   }, 3 * 60 * 1000); // 3 minutes in ms
+  //   return () => clearInterval(devIntervalId);
+  // }, []);
+  // ── END DEV TESTING MODE ─────────────────────────────────────────────────
 
   async function loadTasks() {
     setLoading(true);

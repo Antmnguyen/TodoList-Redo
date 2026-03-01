@@ -15,7 +15,7 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Category } from '../../features/categories';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -46,6 +48,9 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   categories,
   loading = false,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
@@ -89,7 +94,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       {expanded && (
         <View style={styles.listContainer}>
           {loading ? (
-            <ActivityIndicator size="small" color="#007AFF" style={styles.loading} />
+            <ActivityIndicator size="small" color={theme.accent} style={styles.loading} />
           ) : categories.length === 0 ? (
             <Text style={styles.emptyText}>
               No categories yet. Add categories to organize your tasks.
@@ -132,81 +137,83 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  // Header (always visible)
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 16,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  value: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-  },
-  expandIcon: {
-    fontSize: 20,
-    color: '#007AFF',
-    fontWeight: '300',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    // Header (always visible)
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.bgCard,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      marginTop: 16,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 4,
+      letterSpacing: 0.5,
+    },
+    valueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    value: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.textPrimary,
+    },
+    expandIcon: {
+      fontSize: 20,
+      color: theme.accent,
+      fontWeight: '300',
+    },
 
-  // Color indicator dot
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
+    // Color indicator dot
+    colorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: 8,
+    },
 
-  // List container (shown when expanded)
-  listContainer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  loading: {
-    paddingVertical: 16,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#888',
-    paddingVertical: 12,
-  },
+    // List container (shown when expanded)
+    listContainer: {
+      backgroundColor: theme.bgCard,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+    },
+    loading: {
+      paddingVertical: 16,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: theme.textTertiary,
+      paddingVertical: 12,
+    },
 
-  // Individual category item
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 8,
-  },
-  itemSelected: {
-    backgroundColor: '#007AFF',
-  },
-  itemText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-  },
-  itemTextSelected: {
-    color: '#fff',
-  },
-});
+    // Individual category item
+    item: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      backgroundColor: theme.bgInput,
+      marginBottom: 8,
+    },
+    itemSelected: {
+      backgroundColor: theme.accent,
+    },
+    itemText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: theme.textPrimary,
+    },
+    itemTextSelected: {
+      color: '#fff',
+    },
+  });
+}

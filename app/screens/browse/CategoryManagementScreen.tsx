@@ -13,7 +13,7 @@
 //
 // =============================================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,8 @@ import { Category } from '../../features/categories';
 import { getTaskCountForCategory, getTasksForCategory } from '../../core/services/storage/categoryStorage';
 import { CategoryListItem } from '../../components/categories/CategoryListItem';
 import { AddCategoryModal } from '../../components/categories/AddCategoryModal';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -50,6 +52,9 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
   // ---------------------------------------------------------------------------
   // Hook
   // ---------------------------------------------------------------------------
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const { categories, loading, addCategory, editCategory, removeCategory } = useCategories();
 
   // ---------------------------------------------------------------------------
@@ -227,128 +232,130 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    backgroundColor: '#5856D6',
-  },
-  backBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  addBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  addText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  loader: {
-    marginTop: 60,
-  },
-  emptyContainer: {
-    flex: 1,
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#888',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 60,
+      paddingBottom: 16,
+      backgroundColor: '#5856D6',  // brand colour — stays same in dark mode
+    },
+    backBtn: {
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+    },
+    backText: {
+      fontSize: 16,
+      color: '#fff',
+      fontWeight: '500',
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    addBtn: {
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+    },
+    addText: {
+      fontSize: 16,
+      color: '#fff',
+      fontWeight: '600',
+    },
+    loader: {
+      marginTop: 60,
+    },
+    emptyContainer: {
+      flex: 1,
+    },
+    empty: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 80,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    emptySubText: {
+      fontSize: 14,
+      color: theme.textTertiary,
+    },
 
-  // Task list modal
-  taskModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  taskModalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-    maxHeight: '70%',
-  },
-  taskModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  taskModalDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginRight: 10,
-  },
-  taskModalTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  taskModalClose: {
-    fontSize: 18,
-    color: '#aaa',
-  },
-  taskModalEmpty: {
-    fontSize: 15,
-    color: '#888',
-    textAlign: 'center',
-    paddingVertical: 24,
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  taskDot: {
-    fontSize: 16,
-    color: '#888',
-    marginRight: 12,
-    width: 20,
-    textAlign: 'center',
-  },
-  taskTitle: {
-    fontSize: 15,
-    color: '#1a1a1a',
-    flex: 1,
-  },
-  taskTitleDone: {
-    color: '#aaa',
-    textDecorationLine: 'line-through',
-  },
-});
+    // Task list modal
+    taskModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    taskModalSheet: {
+      backgroundColor: theme.bgCard,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 24,
+      paddingBottom: 40,
+      maxHeight: '70%',
+    },
+    taskModalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    taskModalDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      marginRight: 10,
+    },
+    taskModalTitle: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.textPrimary,
+    },
+    taskModalClose: {
+      fontSize: 18,
+      color: theme.textTertiary,
+    },
+    taskModalEmpty: {
+      fontSize: 15,
+      color: theme.textTertiary,
+      textAlign: 'center',
+      paddingVertical: 24,
+    },
+    taskRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.separator,
+    },
+    taskDot: {
+      fontSize: 16,
+      color: theme.textTertiary,
+      marginRight: 12,
+      width: 20,
+      textAlign: 'center',
+    },
+    taskTitle: {
+      fontSize: 15,
+      color: theme.textPrimary,
+      flex: 1,
+    },
+    taskTitleDone: {
+      color: theme.textDisabled,
+      textDecorationLine: 'line-through',
+    },
+  });
+}

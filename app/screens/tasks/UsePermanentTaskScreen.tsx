@@ -3,24 +3,23 @@
 // USE PERMANENT TASK SCREEN
 // =============================================================================
 //
-// Screen for selecting a permanent task template and creating an instance.
-// Displays all available templates, user selects one, then fills in due date
-// to create a task instance that appears in their current tasks.
+// WHAT IS THIS SCREEN FOR?
+//   This is step 2 of using a permanent task template. You already created a
+//   template (in CreatePermanentTaskScreen) — now this screen lets you "stamp
+//   out" a new task from that template for a specific due date.
 //
-// FLOW:
-// 1. Load all templates from storage on mount
-// 2. Display templates in a selectable list
-// 3. User taps a template -> show instance creation modal
-// 4. User sets due date (required) and confirms
-// 5. Instance is created and saved to current tasks
+// WHAT YOU SEE ON SCREEN:
+//   A white navigation bar at the top with a "Cancel" button on the left and
+//   the title "Use Template" in the centre. Below that, one of three states:
+//     - LOADING: spinner + "Loading templates..."
+//     - ERROR: red error message + Retry button
+//     - TEMPLATE LIST: scrollable list of saved templates
 //
-// TODO:
-// - Add organization/grouping by taskType (when taskType is added to storage)
-// - Add search/filter functionality
-// - Add template preview with stats
+//   Tapping a template opens an "Add Task" modal to pick a due date and confirm.
+//
 // =============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -35,8 +34,13 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createTask } from '../../core/domain/taskActions';
-import { getAllPermanentTemplates } from '../../features/permanentTask/utils/permanentTaskActions';
+import {
+  getAllPermanentTemplates,
+  deletePermanentTask,
+} from '../../features/permanentTask/utils/permanentTaskActions';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // DATE HELPERS
@@ -46,7 +50,7 @@ type QuickDateOption = 'today' | 'tomorrow' | 'custom';
 
 const getQuickDate = (option: 'today' | 'tomorrow'): Date => {
   const date = new Date();
-  date.setHours(23, 59, 59, 999); // End of day
+  date.setHours(23, 59, 59, 999);
   if (option === 'tomorrow') {
     date.setDate(date.getDate() + 1);
   }
@@ -83,10 +87,9 @@ interface SelectedTemplate {
 }
 
 export interface UsePermanentTaskScreenProps {
-  // Called when an instance is successfully created
   onInstanceCreated?: (task: Task) => void;
-  // Called when user cancels/goes back
   onCancel?: () => void;
+  onEditTemplate?: (template: Task) => void;
 }
 
 // =============================================================================
@@ -96,29 +99,20 @@ export interface UsePermanentTaskScreenProps {
 export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
   onInstanceCreated,
   onCancel,
+  onEditTemplate,
 }) => {
-  // =========================================================================
-  // STATE
-  // =========================================================================
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  // Templates loaded from storage
   const [templates, setTemplates] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Selected template for instance creation
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
   const [showInstanceModal, setShowInstanceModal] = useState(false);
-
-  // Instance creation form state
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [selectedQuickOption, setSelectedQuickOption] = useState<QuickDateOption>('today');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-
-  // =========================================================================
-  // LOAD TEMPLATES
-  // =========================================================================
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -139,10 +133,6 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
     loadTemplates();
   }, [loadTemplates]);
 
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-
   const handleTemplateSelect = (template: Task) => {
     const metadata = template.metadata as any;
     setSelectedTemplate({
@@ -153,7 +143,6 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
         ? (template.location as any).name
         : template.location,
     });
-    // Reset date selection to today
     setDueDate(getQuickDate('today'));
     setSelectedQuickOption('today');
     setShowDatePicker(false);
@@ -172,7 +161,6 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
   };
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    // On Android, picker dismisses automatically after selection
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
@@ -189,9 +177,6 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
     setIsCreating(true);
 
     try {
-      // Create instance from template
-      // Note: location is inherited from template via templateId lookup in permanentTaskActions
-      // templateId is not in Task type but is expected by createPermanentTask internally
       const newInstance = await createTask(
         selectedTemplate.title,
         'permanent',
@@ -203,11 +188,9 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
 
       console.log('Instance created:', newInstance);
 
-      // Close modal
       setShowInstanceModal(false);
       setSelectedTemplate(null);
 
-      // Notify parent
       if (onInstanceCreated) {
         onInstanceCreated(newInstance);
       } else {
@@ -234,36 +217,107 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
     onCancel?.();
   };
 
-  // =========================================================================
-  // RENDER HELPERS
-  // =========================================================================
+  const handleDeleteTemplate = (template: Task) => {
+    Alert.alert(
+      'Delete Template',
+      `Delete "${template.title}"? This will also delete all instances created from it. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePermanentTask(template);
+              setTemplates(prev => prev.filter(t => t.id !== template.id));
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete template.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const renderTemplateItem = ({ item }: { item: Task }) => {
     const metadata = item.metadata as any;
 
+    // --------------------------------------------------------------------------
+    // Permanent strip colour — all templates are permanent by definition,
+    // so this strip is always purple.  It reinforces that every row in this
+    // list is a reusable template, not a one-off task.
+    // --------------------------------------------------------------------------
+    const permanentStripColor = theme.accentPermanent;
+
+    // --------------------------------------------------------------------------
+    // Category strip colour — use the denormalised colour carried on the Task
+    // object (set by getAllPermanentTemplates via the DB LEFT JOIN).
+    // Falls back to the neutral grey if no category is assigned.
+    // --------------------------------------------------------------------------
+    const categoryStripColor = item.categoryColor ?? theme.categoryStripNone;
+
     return (
+      // Outer row: no paddingLeft so the strips sit flush to the left edge.
+      // paddingRight and paddingVertical keep the original 16 px spacing
+      // on the other three sides.
       <TouchableOpacity
         style={styles.templateItem}
         onPress={() => handleTemplateSelect(item)}
         activeOpacity={0.7}
       >
+
+        {/* ----------------------------------------------------------------
+            CATEGORY COLOUR STRIP (5 px)
+            Leftmost strip — shows the template's category colour, or neutral
+            grey when no category has been assigned.
+            borderTopLeftRadius / borderBottomLeftRadius match the row's
+            implied shape so the strip appears flush with the left edge.
+           ---------------------------------------------------------------- */}
+        <View style={[styles.categoryStrip, { backgroundColor: categoryStripColor }]} />
+
+        {/* ----------------------------------------------------------------
+            PERMANENT INDICATOR STRIP (4 px)
+            Sits immediately to the right of the category strip.
+            Always purple here — all rows in this screen are templates.
+            marginRight creates the gap between the strips and the content.
+           ---------------------------------------------------------------- */}
+        <View style={[styles.permanentStrip, { backgroundColor: permanentStripColor }]} />
+
+        {/* ----------------------------------------------------------------
+            TEMPLATE CONTENT — title, optional location, usage count
+           ---------------------------------------------------------------- */}
         <View style={styles.templateContent}>
           <Text style={styles.templateTitle}>{item.title}</Text>
 
-          {/* Show location if present */}
           {item.location && (
             <Text style={styles.templateLocation}>
               📍 {typeof item.location === 'object' ? (item.location as any).name : item.location}
             </Text>
           )}
 
-          {/* Show instance count */}
           {metadata?.instanceCount !== undefined && (
             <Text style={styles.templateMeta}>
               Used {metadata.instanceCount} time{metadata.instanceCount !== 1 ? 's' : ''}
             </Text>
           )}
         </View>
+
+        {/* ----------------------------------------------------------------
+            CONTEXT MENU BUTTON — Edit or Delete template
+           ---------------------------------------------------------------- */}
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert(item.title, 'Choose an action', [
+              { text: 'Edit Template',   onPress: () => onEditTemplate?.(item) },
+              { text: 'Delete Template', style: 'destructive', onPress: () => handleDeleteTemplate(item) },
+              { text: 'Cancel',          style: 'cancel' },
+            ])
+          }
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.menuButton}
+        >
+          <Text style={styles.menuButtonText}>⋮</Text>
+        </TouchableOpacity>
 
         <Text style={styles.templateArrow}>›</Text>
       </TouchableOpacity>
@@ -279,38 +333,23 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
     </View>
   );
 
-  // TODO: Group templates by taskType when available
-  // const groupedTemplates = useMemo(() => {
-  //   return templates.reduce((groups, template) => {
-  //     const type = template.metadata?.taskType || 'Uncategorized';
-  //     if (!groups[type]) groups[type] = [];
-  //     groups[type].push(template);
-  //     return groups;
-  //   }, {} as Record<string, Task[]>);
-  // }, [templates]);
-
-  // =========================================================================
-  // RENDER
-  // =========================================================================
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+
+      {/* MAIN HEADER BAR */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
           <Text style={styles.headerButtonText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Use Template</Text>
         <View style={styles.headerButton}>
-          {/* Placeholder for symmetry */}
           <Text style={styles.headerButtonText}> </Text>
         </View>
       </View>
 
-      {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
           <Text style={styles.loadingText}>Loading templates...</Text>
         </View>
       ) : error ? (
@@ -331,7 +370,7 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
         />
       )}
 
-      {/* Instance Creation Modal */}
+      {/* "ADD TASK" MODAL */}
       <Modal
         visible={showInstanceModal}
         animationType="slide"
@@ -339,7 +378,8 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
         onRequestClose={handleCancelModal}
       >
         <SafeAreaView style={styles.modalContainer}>
-          {/* Modal Header */}
+
+          {/* MODAL HEADER BAR */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleCancelModal} style={styles.headerButton}>
               <Text style={styles.headerButtonText}>Cancel</Text>
@@ -356,9 +396,10 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Modal Content */}
+          {/* MODAL CONTENT */}
           <View style={styles.modalContent}>
-            {/* Template Info */}
+
+            {/* TEMPLATE section */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>TEMPLATE</Text>
               <Text style={styles.selectedTemplateTitle}>{selectedTemplate?.title}</Text>
@@ -369,11 +410,10 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
               )}
             </View>
 
-            {/* Due Date Selection */}
+            {/* DUE DATE section */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>DUE DATE *</Text>
 
-              {/* Quick Select Buttons */}
               <View style={styles.quickDateContainer}>
                 <TouchableOpacity
                   style={[
@@ -427,13 +467,11 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Selected Date Display */}
               <View style={styles.selectedDateDisplay}>
                 <Text style={styles.selectedDateLabel}>Selected:</Text>
                 <Text style={styles.selectedDateValue}>{formatDateDisplay(dueDate)}</Text>
               </View>
 
-              {/* Date Picker - iOS inline, Android modal */}
               {Platform.OS === 'ios' && showDatePicker && (
                 <DateTimePicker
                   value={dueDate}
@@ -459,11 +497,6 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
                 When should this task be completed?
               </Text>
             </View>
-
-            {/* TODO: Add more instance-specific fields here */}
-            {/* - Custom title override */}
-            {/* - Priority selection */}
-            {/* - Notes/description */}
           </View>
         </SafeAreaView>
       </Modal>
@@ -475,242 +508,267 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-  },
-  headerButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    minWidth: 70,
-    backgroundColor: 'rgba(0,122,255,0.1)', // DEBUG: remove after testing
-  },
-  headerButtonText: {
-    fontSize: 17,
-    color: '#007AFF',
-  },
-  saveButton: {
-    fontWeight: '600',
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 50,
+      paddingBottom: 12,
+      backgroundColor: theme.bgCard,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    headerButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      minWidth: 70,
+    },
+    headerButtonText: {
+      fontSize: 17,
+      color: theme.accent,
+    },
+    saveButton: {
+      fontWeight: '600',
+    },
 
-  // Loading state
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
-  },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
 
-  // Error state
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#ff3b30',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 16,
+      color: theme.danger,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    retryButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      fontSize: 16,
+      color: '#fff',
+      fontWeight: '600',
+    },
 
-  // Empty state
-  emptyListContainer: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
+    emptyListContainer: {
+      flex: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.textPrimary,
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontSize: 16,
+      color: theme.textSecondary,
+      textAlign: 'center',
+    },
 
-  // Template list item
-  templateItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  templateContent: {
-    flex: 1,
-  },
-  templateTitle: {
-    fontSize: 17,
-    color: '#000',
-    fontWeight: '500',
-  },
-  templateLocation: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  templateMeta: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 4,
-  },
-  templateArrow: {
-    fontSize: 22,
-    color: '#c7c7cc',
-    marginLeft: 8,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#ddd',
-    marginLeft: 16,
-  },
+    templateItem: {
+      flexDirection:  'row',
+      // 'stretch' allows the strip Views to grow to the full row height
+      // via their own alignSelf: 'stretch'.
+      alignItems:     'stretch',
+      backgroundColor: theme.bgCard,
+      // No paddingLeft — strips sit flush against the left edge of the row.
+      // paddingRight and paddingVertical preserve the original spacing on
+      // the other three sides.
+      paddingVertical:  14,
+      paddingRight:     16,
+    },
 
-  // Modal
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  modalContent: {
-    flex: 1,
-  },
+    // ── Left-edge identity strips ──────────────────────────────────────────
+    // Mirror the same strip pattern used in TaskItem so template rows and
+    // active task cards feel visually consistent.
 
-  // Sections
-  section: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginTop: 16,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
+    categoryStrip: {
+      // 5 px — leftmost strip, category colour is the primary signal.
+      // Rounded left corners follow the row's implied shape.
+      width:                  5,
+      alignSelf:              'stretch',
+      borderTopLeftRadius:    8,
+      borderBottomLeftRadius: 8,
+    },
+    permanentStrip: {
+      // 4 px — permanent indicator, always purple in this screen.
+      // Sits right of category strip; marginRight gaps to content.
+      width:       4,
+      alignSelf:   'stretch',
+      marginRight: 12,
+    },
 
-  // Selected template display
-  selectedTemplateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-  },
-  selectedTemplateLocation: {
-    fontSize: 15,
-    color: '#666',
-    marginTop: 4,
-  },
+    templateContent: {
+      flex: 1,
+    },
+    templateTitle: {
+      fontSize: 17,
+      color: theme.textPrimary,
+      fontWeight: '500',
+    },
+    templateLocation: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    templateMeta: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      marginTop: 4,
+    },
+    menuButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    menuButtonText: {
+      fontSize: 20,
+      color: theme.textSecondary,
+    },
+    templateArrow: {
+      fontSize: 22,
+      color: theme.hairline,
+      marginLeft: 8,
+    },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: theme.border,
+      marginLeft: 16,
+    },
 
-  // Quick date selection
-  quickDateContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  quickDateButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  quickDateButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  quickDateButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-  },
-  quickDateButtonTextSelected: {
-    color: '#fff',
-  },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.bgCard,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    modalContent: {
+      flex: 1,
+    },
 
-  // Selected date display
-  selectedDateDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  selectedDateLabel: {
-    fontSize: 15,
-    color: '#666',
-    marginRight: 8,
-  },
-  selectedDateValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
+    section: {
+      backgroundColor: theme.bgSection,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      marginTop: 16,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
 
-  // Date picker
-  iosDatePicker: {
-    height: 150,
-    marginBottom: 8,
-  },
-  helperText: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 8,
-  },
-});
+    selectedTemplateTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    selectedTemplateLocation: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+
+    quickDateContainer: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 16,
+    },
+    quickDateButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      backgroundColor: theme.bgInput,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    quickDateButtonSelected: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    quickDateButtonText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: theme.textPrimary,
+    },
+    quickDateButtonTextSelected: {
+      color: '#fff',
+    },
+
+    selectedDateDisplay: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.bgInput,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+    },
+    selectedDateLabel: {
+      fontSize: 15,
+      color: theme.textSecondary,
+      marginRight: 8,
+    },
+    selectedDateValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+
+    iosDatePicker: {
+      height: 150,
+      marginBottom: 8,
+    },
+    helperText: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      marginTop: 8,
+    },
+  });
+}

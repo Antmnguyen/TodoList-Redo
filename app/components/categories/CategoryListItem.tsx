@@ -10,7 +10,7 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import {
   Alert,
 } from 'react-native';
 import { Category } from '../../features/categories';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -43,6 +45,9 @@ export const CategoryListItem: React.FC<CategoryListItemProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
@@ -110,49 +115,51 @@ export const CategoryListItem: React.FC<CategoryListItemProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingRight: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  rowBody: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  colorDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 14,
-  },
-  info: {
-    flex: 1,
-    flexShrink: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
-  },
-  count: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  actionBtn: {
-    paddingHorizontal: 8,
-  },
-  editIcon: {
-    fontSize: 18,
-  },
-  deleteIcon: {
-    fontSize: 18,
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.bgCard,
+      paddingRight: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.separator,
+    },
+    rowBody: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    colorDot: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      marginRight: 14,
+    },
+    info: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    name: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.textPrimary,
+    },
+    count: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      marginTop: 2,
+    },
+    actionBtn: {
+      paddingHorizontal: 8,
+    },
+    editIcon: {
+      fontSize: 18,
+    },
+    deleteIcon: {
+      fontSize: 18,
+    },
+  });
+}

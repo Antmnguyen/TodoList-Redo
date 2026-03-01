@@ -1,6 +1,7 @@
 # Sprint 4 Plan: Statistics System
 
-**Status:** Planning
+**Status:** In Progress
+**Last Updated:** 2026-02-18
 **Goal:** Build comprehensive statistics tracking and visualization system
 
 ---
@@ -47,33 +48,34 @@ StatDetailScreen (opened when card tapped)
 ```
 app/
 ├── screens/stats/
-│   ├── StatsScreen.tsx              # Main stats tab (list of preview cards)
-│   └── StatDetailScreen.tsx         # Detail view (scrollable stats)
+│   ├── StatsScreen.tsx              # Main stats tab — TodayCard + 3 collapsible sections
+│   └── StatDetailScreen.tsx         # Detail view (scrollable stats) [NOT YET BUILT]
 │
 ├── components/stats/
-│   ├── StatPreviewCard.tsx          # Floating rectangle preview
-│   ├── CircularProgress.tsx         # Circular completion indicator
-│   ├── WeeklyMiniChart.tsx          # 7-day bar preview
-│   ├── StreakBadge.tsx              # Streak display
-│   ├── CompletionSummaryCard.tsx    # Total/percent header
-│   ├── TimeCompletionsCard.tsx      # Week/month/year counts
-│   ├── WeekBarGraph.tsx             # Full week bar graph
-│   ├── MonthCalendarGraph.tsx       # Month with circle indicators
-│   └── YearOverviewGraph.tsx        # Year summary visualization
+│   ├── TodayCard.tsx                ✅ Today snapshot card (ring + bar + breakdown + categories)
+│   ├── StatPreviewCard.tsx          ✅ Floating rectangle preview (ring + mini chart + streak)
+│   ├── CircularProgress.tsx         ✅ Circular completion ring (pure RN, no SVG)
+│   ├── WeeklyMiniChart.tsx          ✅ 7-bar Mon–Sun count-based chart
+│   ├── StreakBadge.tsx              ✗ Skipped — streak rendered inline in StatPreviewCard
+│   ├── CompletionSummaryCard.tsx    ☐ Not yet built (Phase 4)
+│   ├── TimeCompletionsCard.tsx      ☐ Not yet built (Phase 4)
+│   ├── WeekBarGraph.tsx             ☐ Not yet built (Phase 4)
+│   ├── MonthCalendarGraph.tsx       ☐ Not yet built (Phase 4)
+│   └── YearOverviewGraph.tsx        ☐ Not yet built (Phase 4)
 │
 ├── core/
 │   ├── services/storage/
-│   │   ├── statsStorage.ts          # Stats queries
-│   │   └── schema/stats.ts          # Stats tables (if needed)
+│   │   ├── statsStorage.ts          ☐ Not yet built (Phase 1)
+│   │   └── schema/stats.ts          ☐ Not yet built (Phase 1)
 │   │
 │   ├── hooks/
-│   │   └── useStats.ts              # Stats data hook
+│   │   └── useStats.ts              ☐ Not yet built (Phase 1)
 │   │
 │   └── utils/
-│       └── statsCalculations.ts     # Streak calc, percentages, etc.
+│       └── statsCalculations.ts     ☐ Not yet built (Phase 1)
 │
 └── types/
-    └── stats.ts                     # Stats type definitions
+    └── stats.ts                     ☐ Not yet built (Phase 1)
 ```
 
 ---
@@ -220,18 +222,21 @@ WHERE completed = 1 AND category = ?;
 - [ ] **1.6** Define stats types in `types/stats.ts`
 
 ### Phase 2: Reusable Components
-- [ ] **2.1** Create `CircularProgress` component
-- [ ] **2.2** Create `WeeklyMiniChart` component
-- [ ] **2.3** Create `StreakBadge` component
-- [ ] **2.4** Create `StatPreviewCard` (combines above)
-- [ ] **2.5** Test preview card with mock data
+- [x] **2.1** Create `CircularProgress` component *(2026-02-18)*
+- [x] **2.2** Create `WeeklyMiniChart` component *(2026-02-18)*
+- [ ] **2.3** Create `StreakBadge` component *(skipped — streak rendered inline in StatPreviewCard)*
+- [x] **2.4** Create `StatPreviewCard` (combines above) *(2026-02-18)*
+- [x] **2.5** Test preview card with mock data *(2026-02-18)*
+- [x] **2.6** Create `TodayCard` — today snapshot with ring, bars, type breakdown, categories *(2026-02-18)*
+- [x] **2.7** Create `CollapsibleSection` — animated accordion with icon badge system *(2026-02-18)*
 
 ### Phase 3: Stats List Screen
-- [ ] **3.1** Update `StatsScreen` to show list of preview cards
-- [ ] **3.2** Load "All Tasks" stats
-- [ ] **3.3** Load per-template stats (dynamic list)
-- [ ] **3.4** Load per-category stats (dynamic list)
-- [ ] **3.5** Add pull-to-refresh
+- [x] **3.1** Update `StatsScreen` with collapsible sections (Overall/Categories/Permanent Tasks) + TodayCard *(2026-02-18)*
+- [ ] **3.2** Load "All Tasks" stats *(blocked on Phase 1)*
+- [ ] **3.3** Load per-template stats (dynamic list) *(blocked on Phase 1)*
+- [ ] **3.4** Load per-category stats (dynamic list) *(blocked on Phase 1)*
+- [ ] **3.5** Load today stats (dynamic) *(blocked on Phase 1)*
+- [ ] **3.6** Add pull-to-refresh
 
 ### Phase 4: Detail Screen Components
 - [ ] **4.1** Create `CompletionSummaryCard`
@@ -248,11 +253,12 @@ WHERE completed = 1 AND category = ?;
 - [ ] **5.5** Render all detail components
 
 ### Phase 6: Polish & Edge Cases
-- [ ] **6.1** Empty states (no data yet)
+- [x] **6.1** Empty states for collapsible sections (`emptyMessage` prop) *(2026-02-18)*
 - [ ] **6.2** Loading states
-- [ ] **6.3** Handle categories with no tasks
+- [ ] **6.3** Handle categories with no tasks (today card category list)
 - [ ] **6.4** Handle templates with no completions
-- [ ] **6.5** Smooth animations/transitions
+- [ ] **6.5** Empty state for TodayCard when there are no tasks today
+- [x] **6.6** Smooth animations/transitions (Animated.parallel expand/collapse) *(2026-02-18)*
 
 ---
 

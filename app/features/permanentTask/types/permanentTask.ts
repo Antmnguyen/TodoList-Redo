@@ -37,6 +37,9 @@ export interface PermanentTask {
 
   /** Category ID (foreign key to categories table) */
   categoryId?: string;
+
+  /** Denormalised from categories table at load time */
+  categoryColor?: string;
 }
 
 /**

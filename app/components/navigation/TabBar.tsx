@@ -23,8 +23,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -47,6 +49,9 @@ interface TabBarProps {
 // =============================================================================
 
 export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <View style={styles.container}>
       {tabs.map(tab => {
@@ -79,65 +84,67 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) =
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  // ---------------------------------------------------------------------------
-  // Container - The tab bar itself
-  // ---------------------------------------------------------------------------
-  container: {
-    flexDirection: 'row',
-    height: 65,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    // Elevation for Android
-    elevation: 8,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    // ---------------------------------------------------------------------------
+    // Container - The tab bar itself
+    // ---------------------------------------------------------------------------
+    container: {
+      flexDirection: 'row',
+      height: 65,
+      backgroundColor: theme.bgCard,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      // Shadow for iOS
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      // Elevation for Android
+      elevation: 8,
+    },
 
-  // ---------------------------------------------------------------------------
-  // Individual Tab
-  // ---------------------------------------------------------------------------
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingBottom: 12, // Extra padding for home indicator on newer phones
-  },
+    // ---------------------------------------------------------------------------
+    // Individual Tab
+    // ---------------------------------------------------------------------------
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      paddingBottom: 12, // Extra padding for home indicator on newer phones
+    },
 
-  // Active tab gets a subtle background highlight
-  activeTab: {
-    backgroundColor: 'rgba(0, 122, 255, 0.08)',
-  },
+    // Active tab gets a subtle background highlight
+    activeTab: {
+      backgroundColor: 'rgba(0, 122, 255, 0.08)',
+    },
 
-  // ---------------------------------------------------------------------------
-  // Icon
-  // ---------------------------------------------------------------------------
-  icon: {
-    fontSize: 22,
-    marginBottom: 4,
-    opacity: 0.6,
-  },
+    // ---------------------------------------------------------------------------
+    // Icon
+    // ---------------------------------------------------------------------------
+    icon: {
+      fontSize: 22,
+      marginBottom: 4,
+      opacity: 0.6,
+    },
 
-  activeIcon: {
-    opacity: 1,
-  },
+    activeIcon: {
+      opacity: 1,
+    },
 
-  // ---------------------------------------------------------------------------
-  // Label
-  // ---------------------------------------------------------------------------
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#8e8e93',
-  },
+    // ---------------------------------------------------------------------------
+    // Label
+    // ---------------------------------------------------------------------------
+    label: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: theme.textSecondary,
+    },
 
-  activeLabel: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-});
+    activeLabel: {
+      color: theme.accent,
+      fontWeight: '600',
+    },
+  });
+}

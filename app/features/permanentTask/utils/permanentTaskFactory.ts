@@ -257,7 +257,7 @@ export function isInstance(task: PermanentTask): boolean {
 /**
  * Creates a next instance based on autoRepeat configuration
  * Useful for recurring tasks
- * 
+ *
  * @param template - The template with autoRepeat configuration
  * @param lastDueDate - The due date of the last instance
  * @returns A new instance with calculated next due date

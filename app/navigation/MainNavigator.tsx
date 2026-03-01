@@ -29,6 +29,15 @@ import { BrowseScreen } from '../screens/browse/BrowseScreen';
 import { CreateTaskScreen, CreateTaskFormData } from '../screens/tasks/CreateTaskScreen';
 import { CreatePermanentTaskScreen, PermanentTaskFormData } from '../screens/tasks/CreatePermanentTaskScreen';
 import { UsePermanentTaskScreen } from '../screens/tasks/UsePermanentTaskScreen';
+import { EditPermanentTaskScreen } from '../screens/tasks/EditPermanentTaskScreen';
+
+// Screens - Stat detail screens
+import { PermanentDetailScreen } from '../screens/stats/detail/PermanentDetailScreen';
+import { OverallDetailScreen }   from '../screens/stats/detail/OverallDetailScreen';
+import { CategoryDetailScreen }  from '../screens/stats/detail/CategoryDetailScreen';
+
+// Types
+import { StatDetailParams } from '../core/types/statDetailTypes';
 
 // Components
 import { FloatingCreateTaskButton } from '../components/tasks/FloatingCreateTaskButton';
@@ -36,13 +45,20 @@ import { FloatingCreateTaskButton } from '../components/tasks/FloatingCreateTask
 // Actions
 import { createTask } from '../core/domain/taskActions';
 import { Task } from '../core/types/task';
+import { useTheme } from '../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 type TabKey = 'tasks' | 'today' | 'stats' | 'browse';
-type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask';
+
+/**
+ * All full-screen overlays the navigator can render.
+ * 'StatDetail' covers all three detail screen types (template / category / all)
+ * — the correct screen is chosen at render time based on statDetailParams.type.
+ */
+type OverlayScreen = 'none' | 'CreateTask' | 'CreatePermanentTask' | 'UsePermanentTask' | 'EditPermanentTask' | 'StatDetail';
 
 // =============================================================================
 // TAB CONFIGURATION
@@ -74,9 +90,23 @@ export const MainNavigator: React.FC = () => {
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('tasks');
   const [overlayScreen, setOverlayScreen] = useState<OverlayScreen>('none');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  /**
+   * Params for the currently open StatDetail overlay.
+   * Null whenever overlayScreen !== 'StatDetail'.
+   * Cleared back to null in goBack() so stale params don't linger.
+   */
+  const [statDetailParams, setStatDetailParams] = useState<StatDetailParams | null>(null);
+
+  /**
+   * The template being edited. Set when the user taps ⋮ → Edit on a template row.
+   * Null whenever overlayScreen !== 'EditPermanentTask'.
+   */
+  const [editingTemplate, setEditingTemplate] = useState<Task | null>(null);
 
   // ---------------------------------------------------------------------------
   // FAB Handlers
@@ -85,7 +115,25 @@ export const MainNavigator: React.FC = () => {
   const handleUsePermanentTask = () => setOverlayScreen('UsePermanentTask');
   const handleCreatePermanentTask = () => setOverlayScreen('CreatePermanentTask');
 
-  const goBack = () => setOverlayScreen('none');
+  const handleEditTemplate = (template: Task) => {
+    setEditingTemplate(template);
+    setOverlayScreen('EditPermanentTask');
+  };
+
+  const goBack = () => {
+    setOverlayScreen('none');
+    setStatDetailParams(null);
+    setEditingTemplate(null);
+  };
+
+  /**
+   * Called by StatsScreen when any StatPreviewCard is tapped.
+   * Routes to the correct detail screen based on the card type.
+   */
+  const handleStatCardPress = (p: StatDetailParams) => {
+    setStatDetailParams(p);
+    setOverlayScreen('StatDetail');
+  };
 
   // ---------------------------------------------------------------------------
   // Create Screen Callbacks
@@ -127,7 +175,7 @@ export const MainNavigator: React.FC = () => {
       case 'today':
         return <TodayScreen key={`today-${refreshKey}`} />;
       case 'stats':
-        return <StatsScreen />;
+        return <StatsScreen onStatCardPress={handleStatCardPress} />;
       case 'browse':
         return <BrowseScreen />;
       default:
@@ -159,8 +207,47 @@ export const MainNavigator: React.FC = () => {
           <UsePermanentTaskScreen
             onInstanceCreated={handleInstanceCreated}
             onCancel={goBack}
+            onEditTemplate={handleEditTemplate}
           />
         );
+
+      case 'EditPermanentTask':
+        if (!editingTemplate) return null;
+        return (
+          <EditPermanentTaskScreen
+            template={editingTemplate}
+            onSave={() => {
+              setRefreshKey(prev => prev + 1);
+              goBack();
+            }}
+            onCancel={goBack}
+          />
+        );
+
+      case 'StatDetail': {
+        // Guard: params must be present (should always be true here)
+        if (!statDetailParams) return null;
+
+        // Route to the correct detail screen based on which type of card was tapped.
+        if (statDetailParams.type === 'template') {
+          return <PermanentDetailScreen params={statDetailParams} onBack={goBack} />;
+        }
+        if (statDetailParams.type === 'all') {
+          return <OverallDetailScreen params={statDetailParams} onBack={goBack} />;
+        }
+        if (statDetailParams.type === 'category') {
+          return (
+            <CategoryDetailScreen
+              params={statDetailParams}
+              onBack={goBack}
+              onStatCardPress={handleStatCardPress}
+            />
+          );
+        }
+
+        return null;
+      }
+
       default:
         return null;
     }
@@ -177,7 +264,7 @@ export const MainNavigator: React.FC = () => {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
       {/* Content Area */}
       <View style={styles.content}>
         {overlayScreen === 'none' ? renderTabContent() : renderOverlayScreen()}

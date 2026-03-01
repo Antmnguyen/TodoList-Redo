@@ -69,31 +69,52 @@ export async function getTemplateById(templateId: string): Promise<PermanentTask
 }
 
 /**
- * Get all templates
+ * Get all templates, including each template's category colour.
+ *
+ * The LEFT JOIN on categories denormalises `category_color` so that
+ * UsePermanentTaskScreen can paint the category colour strip on each
+ * template row without making a separate DB call per row.
+ *
+ * category_color is NULL when:
+ *   - the template has no categoryId, OR
+ *   - the referenced category has no colour set
+ * In both cases the UI falls back to theme.categoryStripNone.
  */
 export async function getAllTemplates(): Promise<PermanentTask[]> {
   const rows = db.getAllSync<{
-    permanentId: string;
-    templateTitle: string;
-    isTemplate: number;
-    instanceCount: number;
-    autoRepeat: string | null;
-    location: string | null;
-    createdAt: number;
-    category_id: string | null;
-  }>(`SELECT * FROM templates WHERE isTemplate = 1 ORDER BY createdAt DESC`);
+    permanentId:    string;
+    templateTitle:  string;
+    isTemplate:     number;
+    instanceCount:  number;
+    autoRepeat:     string | null;
+    location:       string | null;
+    createdAt:      number;
+    category_id:    string | null;
+    category_color: string | null; // aliased from categories.color via LEFT JOIN
+  }>(`
+    SELECT t.permanentId, t.templateTitle, t.isTemplate, t.instanceCount,
+           t.autoRepeat, t.location, t.createdAt, t.category_id,
+           c.color AS category_color
+    FROM   templates t
+    LEFT JOIN categories c ON c.id = t.category_id
+    WHERE  t.isTemplate = 1
+    ORDER BY t.createdAt DESC
+  `);
 
   return rows.map(row => ({
-    id: row.permanentId,
-    permanentId: row.permanentId,
+    id:            row.permanentId,
+    permanentId:   row.permanentId,
     templateTitle: row.templateTitle,
-    isTemplate: Boolean(row.isTemplate),
+    isTemplate:    Boolean(row.isTemplate),
     instanceCount: row.instanceCount,
-    autoRepeat: row.autoRepeat ? JSON.parse(row.autoRepeat) : undefined,
-    location: row.location || undefined,
-    createdAt: row.createdAt,
-    completed: false,
-    categoryId: row.category_id || undefined,
+    autoRepeat:    row.autoRepeat ? JSON.parse(row.autoRepeat) : undefined,
+    location:      row.location || undefined,
+    createdAt:     row.createdAt,
+    completed:     false,
+    categoryId:    row.category_id    || undefined,
+    // Denormalised colour — passed straight through to the Task object so
+    // UsePermanentTaskScreen doesn't need a second query to look it up.
+    categoryColor: row.category_color || undefined,
   }));
 }
 
@@ -354,4 +375,62 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
 export async function getTemplateStats(templateId: string): Promise<TemplateStats | null> {
   const rows = db.getAllSync<TemplateStats>(`SELECT * FROM template_stats WHERE templateId = ?`, [templateId]);
   return rows.length ? rows[0] : null;
+}
+
+/**
+ * Cascade a template category change to all its existing instances.
+ *
+ * MUST be called whenever templates.category_id changes.
+ * Updates template_instances and tasks tables so pending instances
+ * stay consistent with the template's new category.
+ *
+ * Does NOT touch completion_log — historical completions are immutable
+ * and intentionally remain under the category they were completed in.
+ */
+export function updateTemplateCategoryInInstances(
+  permanentId: string,
+  newCategoryId: string | null
+): void {
+  db.runSync(
+    `UPDATE template_instances SET category_id = ? WHERE templateId = ?`,
+    [newCategoryId, permanentId]
+  );
+  db.runSync(
+    `UPDATE tasks SET category_id = ?
+      WHERE id IN (SELECT instanceId FROM template_instances WHERE templateId = ?)`,
+    [newCategoryId, permanentId]
+  );
+}
+
+/**
+ * Returns a map from instanceId → template metadata for every row in
+ * template_instances. Used by getAllTasks() to reconstruct `kind` and
+ * `metadata` on tasks loaded from the DB, without N+1 queries.
+ *
+ * Mirrors the logic inside getInstanceById() but batched and synchronous.
+ */
+export function getAllInstanceMetaSync(): Map<string, {
+  templateId:    string;
+  templateTitle: string;
+  autoRepeat:    any;
+}> {
+  const rows = db.getAllSync<{
+    instanceId:    string;
+    templateId:    string;
+    templateTitle: string;
+    autoRepeat:    string | null;
+  }>(
+    `SELECT ti.instanceId, ti.templateId, tmpl.templateTitle, tmpl.autoRepeat
+     FROM template_instances ti
+     JOIN templates tmpl ON tmpl.permanentId = ti.templateId`
+  );
+
+  return new Map(rows.map(r => [
+    r.instanceId,
+    {
+      templateId:    r.templateId,
+      templateTitle: r.templateTitle,
+      autoRepeat:    r.autoRepeat ? JSON.parse(r.autoRepeat) : undefined,
+    },
+  ]));
 }
