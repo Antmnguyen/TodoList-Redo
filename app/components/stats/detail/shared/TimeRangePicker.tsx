@@ -33,8 +33,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -82,72 +84,79 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
   selected,
   onChange,
   color,
-}) => (
-  <View style={styles.container}>
-    <View style={styles.strip}>
-      {TABS.map((tab) => {
-        const isActive = tab.value === selected;
-        return (
-          <TouchableOpacity
-            key={tab.value}
-            style={[styles.tab, isActive && { backgroundColor: color }]}
-            onPress={() => onChange(tab.value)}
-            activeOpacity={0.75}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                isActive ? styles.labelActive : styles.labelInactive,
-              ]}
+}) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.strip}>
+        {TABS.map((tab) => {
+          const isActive = tab.value === selected;
+          return (
+            <TouchableOpacity
+              key={tab.value}
+              style={[styles.tab, isActive && { backgroundColor: color }]}
+              onPress={() => onChange(tab.value)}
+              activeOpacity={0.75}
             >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+              <Text
+                style={[
+                  styles.tabLabel,
+                  isActive ? styles.labelActive : styles.labelInactive,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 16,
-    marginBottom:     14,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      marginHorizontal: 16,
+      marginBottom:     14,
+    },
 
-  // Outer track — grey pill that contains all tabs
-  strip: {
-    flexDirection:   'row',
-    backgroundColor: '#f2f2f2',
-    borderRadius:    12,
-    padding:         3,
-    gap:             2,
-  },
+    // Outer track — grey pill that contains all tabs
+    strip: {
+      flexDirection:   'row',
+      backgroundColor: theme.separator,
+      borderRadius:    12,
+      padding:         3,
+      gap:             2,
+    },
 
-  // Individual tab button — equal flex so all four share the strip width
-  tab: {
-    flex:            1,
-    alignItems:      'center',
-    paddingVertical: 8,
-    borderRadius:    10,
-  },
+    // Individual tab button — equal flex so all four share the strip width
+    tab: {
+      flex:            1,
+      alignItems:      'center',
+      paddingVertical: 8,
+      borderRadius:    10,
+    },
 
-  tabLabel: {
-    fontSize:   13,
-    fontWeight: '600',
-  },
+    tabLabel: {
+      fontSize:   13,
+      fontWeight: '600',
+    },
 
-  // Active tab: white text for legibility on colored pill
-  labelActive: {
-    color: '#fff',
-  },
+    // Active tab: white text for legibility on colored pill
+    labelActive: {
+      color: '#fff',
+    },
 
-  // Inactive tab: muted grey
-  labelInactive: {
-    color: '#999',
-  },
-});
+    // Inactive tab: muted grey
+    labelInactive: {
+      color: theme.textTertiary,
+    },
+  });
+}

@@ -51,6 +51,7 @@ import { PermanentTaskListCard, PermanentTaskStat } from '../../../components/st
 // ── Types ─────────────────────────────────────────────────────────────────────
 import { StatDetailParams } from '../../../core/types/statDetailTypes';
 import { useStats }         from '../../../core/hooks/useStats';
+import { useTheme }         from '../../../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
@@ -72,6 +73,7 @@ export const CategoryDetailScreen: React.FC<CategoryDetailScreenProps> = ({
   onBack,
   onStatCardPress,
 }) => {
+  const { theme } = useTheme();
   const stats = useStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const data  = useMemo(() => stats.getCategoryDetail(params.id), [params.id]);
@@ -88,7 +90,7 @@ export const CategoryDetailScreen: React.FC<CategoryDetailScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ── Fixed header ────────────────────────────────────────────────── */}
       <DetailHeader

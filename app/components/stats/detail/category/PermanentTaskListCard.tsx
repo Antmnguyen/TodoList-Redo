@@ -28,8 +28,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -71,6 +73,9 @@ export const PermanentTaskListCard: React.FC<PermanentTaskListCardProps> = ({
   color,
   onTaskPress,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   if (tasks.length === 0) return null;
 
   return (
@@ -120,74 +125,76 @@ export const PermanentTaskListCard: React.FC<PermanentTaskListCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    letterSpacing: 1.1,
-    marginBottom:  14,
-  },
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      letterSpacing: 1.1,
+      marginBottom:  14,
+    },
 
-  row: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    paddingVertical: 10,
-    gap:           10,
-  },
+    row: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      paddingVertical: 10,
+      gap:            10,
+    },
 
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
+    rowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: theme.separator,
+    },
 
-  // Task name — takes a fixed chunk then the bar fills remaining space
-  taskName: {
-    width:      130,
-    fontSize:   14,
-    fontWeight: '600',
-    color:      '#333',
-    flexShrink: 0,
-  },
+    // Task name — takes a fixed chunk then the bar fills remaining space
+    taskName: {
+      width:      130,
+      fontSize:   14,
+      fontWeight: '600',
+      color:      theme.textPrimary,
+      flexShrink: 0,
+    },
 
-  barTrack: {
-    flex:            1,
-    height:          6,
-    borderRadius:    3,
-    backgroundColor: '#f0f0f0',
-    overflow:        'hidden',
-  },
+    barTrack: {
+      flex:            1,
+      height:          6,
+      borderRadius:    3,
+      backgroundColor: theme.separator,
+      overflow:        'hidden',
+    },
 
-  barFill: {
-    height:       6,
-    borderRadius: 3,
-  },
+    barFill: {
+      height:       6,
+      borderRadius: 3,
+    },
 
-  rate: {
-    width:      38,
-    fontSize:   13,
-    fontWeight: '700',
-    textAlign:  'right',
-    flexShrink: 0,
-  },
+    rate: {
+      width:      38,
+      fontSize:   13,
+      fontWeight: '700',
+      textAlign:  'right',
+      flexShrink: 0,
+    },
 
-  chevron: {
-    fontSize:   18,
-    color:      '#ccc',
-    fontWeight: '400',
-    lineHeight: 22,
-    flexShrink: 0,
-  },
-});
+    chevron: {
+      fontSize:   18,
+      color:      theme.textDisabled,
+      fontWeight: '400',
+      lineHeight: 22,
+      flexShrink: 0,
+    },
+  });
+}

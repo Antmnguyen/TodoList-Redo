@@ -25,8 +25,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -53,6 +55,8 @@ export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
   categories,
   color,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const peak = Math.max(...categories.map(c => c.count), 1);
 
   return (
@@ -105,81 +109,83 @@ export const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    letterSpacing: 1.1,
-    marginBottom:  16,
-  },
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      letterSpacing: 1.1,
+      marginBottom:  16,
+    },
 
-  row: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    marginBottom:  10,
-    gap:           8,
-  },
+    row: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      marginBottom:  10,
+      gap:           8,
+    },
 
-  // Colored category indicator dot
-  dot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-    flexShrink:   0,
-  },
+    // Colored category indicator dot
+    dot: {
+      width:        8,
+      height:       8,
+      borderRadius: 4,
+      flexShrink:   0,
+    },
 
-  // Fixed-width name so bars stay aligned across rows
-  name: {
-    width:      80,
-    fontSize:   13,
-    fontWeight: '600',
-    color:      '#555',
-    flexShrink: 0,
-  },
+    // Fixed-width name so bars stay aligned across rows
+    name: {
+      width:      80,
+      fontSize:   13,
+      fontWeight: '600',
+      color:      theme.textSecondary,
+      flexShrink: 0,
+    },
 
-  // Bar track fills remaining horizontal space
-  barTrack: {
-    flex:            1,
-    height:          8,
-    borderRadius:    4,
-    backgroundColor: '#f0f0f0',
-    overflow:        'hidden',
-  },
+    // Bar track fills remaining horizontal space
+    barTrack: {
+      flex:            1,
+      height:          8,
+      borderRadius:    4,
+      backgroundColor: theme.separator,
+      overflow:        'hidden',
+    },
 
-  barFill: {
-    height:       8,
-    borderRadius: 4,
-  },
+    barFill: {
+      height:       8,
+      borderRadius: 4,
+    },
 
-  // Raw count — right of the bar
-  count: {
-    width:      32,
-    fontSize:   12,
-    fontWeight: '600',
-    color:      '#999',
-    textAlign:  'right',
-    flexShrink: 0,
-  },
+    // Raw count — right of the bar
+    count: {
+      width:      32,
+      fontSize:   12,
+      fontWeight: '600',
+      color:      theme.textTertiary,
+      textAlign:  'right',
+      flexShrink: 0,
+    },
 
-  // Completion rate — rightmost column
-  pct: {
-    width:      36,
-    fontSize:   12,
-    fontWeight: '700',
-    textAlign:  'right',
-    flexShrink: 0,
-  },
-});
+    // Completion rate — rightmost column
+    pct: {
+      width:      36,
+      fontSize:   12,
+      fontWeight: '700',
+      textAlign:  'right',
+      flexShrink: 0,
+    },
+  });
+}

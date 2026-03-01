@@ -16,7 +16,7 @@
 // See docs/sprint-5/permanant_tasks_editing/plan.md for full design.
 // =============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,8 @@ import { PermanentTask } from '../../features/permanentTask/types/permanentTask'
 import { useCategories, Category } from '../../features/categories';
 import { CategorySelector } from '../../components/categories/CategorySelector';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -58,19 +60,13 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
 }) => {
   const meta = template.metadata as any;
 
-  // =========================================================================
-  // HOOKS
-  // =========================================================================
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const { categories, loading: categoriesLoading } = useCategories();
 
-  // =========================================================================
-  // FORM STATE — pre-populated from the template
-  // =========================================================================
-
   const [templateTitle, setTemplateTitle] = useState(template.title);
 
-  // Category selector expects a full Category object; we find it once categories load
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   const [location, setLocation] = useState(
@@ -92,17 +88,12 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // Once categories load, find and set the one matching the template's categoryId
   useEffect(() => {
     if (!categoriesLoading && categories.length > 0 && template.categoryId) {
       const match = categories.find(c => c.id === template.categoryId) ?? null;
       setSelectedCategory(match);
     }
   }, [categoriesLoading, categories, template.categoryId]);
-
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
 
   const handleSave = async () => {
     if (!templateTitle.trim()) {
@@ -132,14 +123,8 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
         completed: false,
       };
 
-      // 1. Update the template row (INSERT OR REPLACE on same permanentId)
       await savePermanentTemplate(updated);
 
-      // 2. If category changed, cascade to all existing instances.
-      //    Updates template_instances and tasks so pending instances
-      //    appear under the correct category.
-      //    completion_log is NOT touched — historical completions stay
-      //    under the category they were completed in.
       if (categoryChanged) {
         updateTemplateCategoryInInstances(permanentId, newCategoryId);
       }
@@ -151,10 +136,6 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
       setIsSaving(false);
     }
   };
-
-  // =========================================================================
-  // RENDER
-  // =========================================================================
 
   return (
     <SafeAreaView style={styles.container}>
@@ -184,7 +165,7 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
           <TextInput
             style={styles.textInput}
             placeholder="e.g., Morning Workout, Weekly Review"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.textDisabled}
             value={templateTitle}
             onChangeText={setTemplateTitle}
             autoFocus
@@ -216,7 +197,7 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
             <TextInput
               style={styles.textInput}
               placeholder="e.g., Home, Gym, Office"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textDisabled}
               value={location}
               onChangeText={setLocation}
             />
@@ -242,7 +223,7 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
               <Switch
                 value={autoRepeatEnabled}
                 onValueChange={setAutoRepeatEnabled}
-                trackColor={{ false: '#ddd', true: '#007AFF' }}
+                trackColor={{ false: theme.border, true: theme.accent }}
                 thumbColor="#fff"
               />
             </View>
@@ -290,133 +271,135 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
 // STYLES — mirrors CreatePermanentTaskScreen
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-  },
-  headerButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  headerButtonText: {
-    fontSize: 17,
-    color: '#007AFF',
-  },
-  saveButton: {
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 1,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  textInput: {
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  helperText: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 8,
-  },
-  optionalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#ddd',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  optionalHeaderText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  expandIcon: {
-    fontSize: 20,
-    color: '#007AFF',
-    fontWeight: '300',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  switchLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  frequencyContainer: {
-    marginTop: 16,
-  },
-  frequencyLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  frequencyOptions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  frequencyOption: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  frequencyOptionSelected: {
-    backgroundColor: '#007AFF',
-  },
-  frequencyOptionText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  frequencyOptionTextSelected: {
-    color: '#fff',
-  },
-  bottomSpacer: {
-    height: 40,
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.bgCard,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    headerButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    headerButtonText: {
+      fontSize: 17,
+      color: theme.accent,
+    },
+    saveButton: {
+      fontWeight: '600',
+    },
+    content: {
+      flex: 1,
+    },
+    section: {
+      backgroundColor: theme.bgSection,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 1,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    textInput: {
+      fontSize: 16,
+      color: theme.textPrimary,
+      backgroundColor: theme.bgInput,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    helperText: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      marginTop: 8,
+    },
+    optionalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.bgCard,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      marginTop: 16,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.hairline,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.hairline,
+    },
+    optionalHeaderText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    expandIcon: {
+      fontSize: 20,
+      color: theme.accent,
+      fontWeight: '300',
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    switchLabel: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    frequencyContainer: {
+      marginTop: 16,
+    },
+    frequencyLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    frequencyOptions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    frequencyOption: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      backgroundColor: theme.bgInput,
+      alignItems: 'center',
+    },
+    frequencyOptionSelected: {
+      backgroundColor: theme.accent,
+    },
+    frequencyOptionText: {
+      fontSize: 14,
+      color: theme.textPrimary,
+      fontWeight: '500',
+    },
+    frequencyOptionTextSelected: {
+      color: '#fff',
+    },
+    bottomSpacer: {
+      height: 40,
+    },
+  });
+}

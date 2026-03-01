@@ -24,6 +24,7 @@ import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModa
 import { filterTasksDueToday } from '../../core/utils/taskFilters';
 import { sortTasksByCompletion } from '../../core/utils/taskSorting';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
 
 // =============================================================================
 // COMPONENT
@@ -34,6 +35,7 @@ export const TodayScreen: React.FC = () => {
   // Hook providing task data and operations
   // Location: app/core/hooks/useTasks.ts
   // ---------------------------------------------------------------------------
+  const { theme } = useTheme();
   const { tasks, toggleTask, removeTask, editTask } = useTasks();
 
   // ---------------------------------------------------------------------------
@@ -89,7 +91,7 @@ export const TodayScreen: React.FC = () => {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgScreen }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Today</Text>

@@ -13,7 +13,7 @@
 //
 // =============================================================================
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,8 @@ import { StatPreviewCard, StatPreviewData } from '../../components/stats/StatPre
 import { TodayCard } from '../../components/stats/TodayCard';
 import { StatDetailParams } from '../../core/types/statDetailTypes';
 import { useStats } from '../../core/hooks/useStats';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // COLLAPSIBLE SECTION
@@ -39,7 +41,6 @@ import { useStats } from '../../core/hooks/useStats';
 // ── HOW TO SWAP IN A CUSTOM ICON ─────────────────────────────────────────────
 //
 //  Pass a `renderIcon` function that returns any React element.
-//  The element is centered inside the badge square — size it to fit.
 //
 //  Option A — Emoji (current default, zero dependencies):
 //    renderIcon={() => <Text style={{ fontSize: 26 }}>📊</Text>}
@@ -81,19 +82,15 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
 
-  // ── Icon ──────────────────────────────────────────────────────────────────
-  // Return any element here — emoji Text, Image, or a vector icon component.
-  // See the guide above for examples.
   renderIcon: () => React.ReactNode;
 
-  // ── Badge styling ─────────────────────────────────────────────────────────
-  badgeColor: string;           // hex, e.g. '#FF9500'
-  badgeOpacity?: number;        // bg opacity 0–1          default: 0.12
-  badgeSize?: number;           // badge square px         default: 52
-  badgeBorderRadius?: number;   // corner radius px        default: 14
-  badgeBorderWidth?: number;    // 0 = no border           default: 0
-  badgeBorderColor?: string;    // defaults to badgeColor
-  emptyMessage?: string;        // shown inside section when there are no items
+  badgeColor: string;
+  badgeOpacity?: number;
+  badgeSize?: number;
+  badgeBorderRadius?: number;
+  badgeBorderWidth?: number;
+  badgeBorderColor?: string;
+  emptyMessage?: string;
 }
 
 const ANIM_DURATION_OPEN  = 320;
@@ -113,6 +110,9 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   badgeBorderColor,
   emptyMessage,
 }) => {
+  const { theme } = useTheme();
+  const sectionStyles = useMemo(() => makeSectionStyles(theme), [theme]);
+
   const [open, setOpen] = useState(defaultOpen);
   const anim    = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
   const opacity = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
@@ -142,13 +142,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     outputRange: [0, MAX_CONTENT_HEIGHT],
   });
 
-  // Chevron: › rotated 0° (right = collapsed) → 90° (down = expanded)
   const chevronRotation = anim.interpolate({
     inputRange:  [0, 1],
     outputRange: ['0deg', '90deg'],
   });
 
-  // Computed badge styles from props
   const badgeStyle = {
     width:           badgeSize,
     height:          badgeSize,
@@ -165,16 +163,12 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         onPress={toggle}
         activeOpacity={0.75}
       >
-        {/* ── Icon badge ─────────────────────────────────────────────────
-            Swap renderIcon to change the icon. See guide at top of file. */}
         <View style={[sectionStyles.iconBadgeBase, badgeStyle]}>
           {renderIcon()}
         </View>
 
-        {/* Title */}
         <Text style={sectionStyles.title}>{title}</Text>
 
-        {/* Chevron — rotates 90° on open */}
         <Animated.Text
           style={[sectionStyles.chevron, { transform: [{ rotate: chevronRotation }] }]}
         >
@@ -195,82 +189,62 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   );
 };
 
-const sectionStyles = StyleSheet.create({
-  box: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-    gap: 14,
-  },
-  // Base layout only — size/color/radius are applied inline from props
-  iconBadgeBase: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    letterSpacing: 0.2,
-  },
-  chevron: {
-    fontSize: 26,
-    color: '#c0c0c0',
-    lineHeight: 28,
-  },
-  content: {
-    borderTopWidth: 1,
-    borderTopColor: '#f2f2f2',
-  },
-  emptyText: {
-    padding: 20,
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#ccc',
-    fontWeight: '500',
-  },
-});
-
-// Inner card style — removes individual card chrome so cards sit flush inside the section box
-const innerCard = {
-  marginHorizontal: 0,
-  marginBottom: 0,
-  borderRadius: 0,
-  shadowOpacity: 0,
-  elevation: 0,
-  borderTopWidth: 1,
-  borderTopColor: '#f2f2f2',
-};
-const innerCardFirst = { ...innerCard, borderTopWidth: 0 };
-
+function makeSectionStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    box: {
+      backgroundColor: theme.bgCard,
+      borderRadius: 20,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 22,
+      gap: 14,
+    },
+    iconBadgeBase: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      flex: 1,
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.textPrimary,
+      letterSpacing: 0.2,
+    },
+    chevron: {
+      fontSize: 26,
+      color: theme.hairline,
+      lineHeight: 28,
+    },
+    content: {
+      borderTopWidth: 1,
+      borderTopColor: theme.separator,
+    },
+    emptyText: {
+      padding: 20,
+      textAlign: 'center',
+      fontSize: 14,
+      color: theme.textDisabled,
+      fontWeight: '500',
+    },
+  });
+}
 
 // =============================================================================
 // PROPS
 // =============================================================================
 
 interface StatsScreenProps {
-  /**
-   * Called when any StatPreviewCard is tapped.
-   * MainNavigator provides this and routes to the correct detail screen
-   * based on the card's type ('template' | 'category' | 'all').
-   *
-   * Optional so StatsScreen can still be rendered standalone in tests
-   * or Storybook without a navigator wrapping it.
-   */
   onStatCardPress?: (params: StatDetailParams) => void;
 }
 
@@ -278,11 +252,6 @@ interface StatsScreenProps {
 // HELPERS
 // =============================================================================
 
-/**
- * Maps an overall card's id (e.g. 'all_week') to the matching TimeRange tab
- * so OverallDetailScreen opens pre-selected on the right tab.
- * Only meaningful for type === 'all' cards — other types return undefined.
- */
 function resolveInitialTimeRange(id: string): StatDetailParams['initialTimeRange'] {
   const map: Record<string, StatDetailParams['initialTimeRange']> = {
     all_week:  'week',
@@ -298,6 +267,21 @@ function resolveInitialTimeRange(id: string): StatDetailParams['initialTimeRange
 // =============================================================================
 
 export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  // Inner card style — removes individual card chrome so cards sit flush inside the section box
+  const innerCard = useMemo(() => ({
+    marginHorizontal: 0,
+    marginBottom: 0,
+    borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    borderTopWidth: 1,
+    borderTopColor: theme.separator,
+  }), [theme]);
+  const innerCardFirst = useMemo(() => ({ ...innerCard, borderTopWidth: 0 }), [innerCard]);
+
   // ── Data ─────────────────────────────────────────────────────────────────
   const stats       = useStats();
   const todayStats  = stats.getTodayStats();
@@ -306,11 +290,6 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
   const categories  = stats.getCategoryStatsList();
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  /**
-   * Fired by every StatPreviewCard tap, for all three card types.
-   * Converts StatPreviewData → StatDetailParams and delegates to the
-   * navigator's handler. Falls back to a log if no handler is wired.
-   */
   const handleCardPress = (data: StatPreviewData) => {
     if (!onStatCardPress) {
       console.log('Stat card tapped (no handler):', data.type, data.name);
@@ -343,7 +322,6 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
         <TodayCard data={todayStats} />
 
         {/* ── Overall ───────────────────────────────────────────────── */}
-        {/* 📊 swap renderIcon to use an image or vector icon — see guide at top */}
         <CollapsibleSection
           title="Overall"
           renderIcon={() => <Text style={{ fontSize: 26 }}>📊</Text>}
@@ -362,7 +340,6 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
         </CollapsibleSection>
 
         {/* ── Categories ────────────────────────────────────────────── */}
-        {/* 🗂️ swap renderIcon to use an image or vector icon — see guide at top */}
         <CollapsibleSection
           title="Categories"
           renderIcon={() => <Text style={{ fontSize: 26 }}>🗂️</Text>}
@@ -381,7 +358,6 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
         </CollapsibleSection>
 
         {/* ── Permanent Tasks ───────────────────────────────────────── */}
-        {/* 🔁 swap renderIcon to use an image or vector icon — see guide at top */}
         <CollapsibleSection
           title="Permanent Tasks"
           renderIcon={() => <Text style={{ fontSize: 26 }}>🔁</Text>}
@@ -409,33 +385,35 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#FF9500',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.8,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 20,
-  },
-  bottomPad: {
-    height: 32,
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
+    header: {
+      padding: 20,
+      paddingTop: 60,
+      backgroundColor: '#FF9500',  // brand colour — stays same in dark mode
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: '#fff',
+    },
+    subtitle: {
+      fontSize: 16,
+      color: '#fff',
+      opacity: 0.8,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingTop: 20,
+    },
+    bottomPad: {
+      height: 32,
+    },
+  });
+}

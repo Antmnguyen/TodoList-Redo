@@ -30,6 +30,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -101,11 +103,13 @@ interface BarColumnProps {
 }
 
 const BarColumn: React.FC<BarColumnProps> = ({ day, segments, total, maxTotal, color }) => {
+  const { theme } = useTheme();
+  const colStyles = useMemo(() => makeColStyles(theme), [theme]);
   const hasActivity = total > 0;
 
   return (
-    <View style={col.container}>
-      <View style={[col.barArea, { height: BAR_MAX_HEIGHT }]}>
+    <View style={colStyles.container}>
+      <View style={[colStyles.barArea, { height: BAR_MAX_HEIGHT }]}>
         {hasActivity ? (
           <View style={{ width: BAR_WIDTH, overflow: 'hidden', borderRadius: 5 }}>
             {[...segments].reverse().map((seg, i) => {
@@ -119,23 +123,16 @@ const BarColumn: React.FC<BarColumnProps> = ({ day, segments, total, maxTotal, c
               width:           BAR_WIDTH,
               height:          BAR_MIN_HEIGHT,
               borderRadius:    5,
-              backgroundColor: '#e8e8e8',
+              backgroundColor: theme.separator,
             }}
           />
         )}
       </View>
-      <Text style={col.dayLabel}>{day}</Text>
-      <Text style={[col.valueLabel, hasActivity && { color }]}>{total}</Text>
+      <Text style={colStyles.dayLabel}>{day}</Text>
+      <Text style={[colStyles.valueLabel, hasActivity && { color }]}>{total}</Text>
     </View>
   );
 };
-
-const col = StyleSheet.create({
-  container:  { alignItems: 'center', flex: 1 },
-  barArea:    { justifyContent: 'flex-end', alignItems: 'center' },
-  dayLabel:   { fontSize: 12, color: '#aaa', fontWeight: '600', marginTop: 6 },
-  valueLabel: { fontSize: 11, color: '#ccc', fontWeight: '500', marginTop: 2 },
-});
 
 // =============================================================================
 // COMPONENT
@@ -147,6 +144,9 @@ export const CategoryWeekBarGraph: React.FC<CategoryWeekBarGraphProps> = ({
   initialWeekStart,
   onWeekChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const [weekStart, setWeekStart] = useState<Date>(
     () => initialWeekStart ? getMondayOf(initialWeekStart) : getMondayOf(new Date()),
   );
@@ -246,91 +246,96 @@ export const CategoryWeekBarGraph: React.FC<CategoryWeekBarGraphProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container:  { alignItems: 'center', flex: 1 },
+    barArea:    { justifyContent: 'flex-end', alignItems: 'center' },
+    dayLabel:   { fontSize: 12, color: theme.textTertiary, fontWeight: '600', marginTop: 6 },
+    valueLabel: { fontSize: 11, color: theme.textDisabled, fontWeight: '500', marginTop: 2 },
+  });
+}
 
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    color:         '#ccc',
-    letterSpacing: 1.1,
-    marginBottom:  10,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  navRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    backgroundColor:   '#fafafa',
-    borderRadius:      12,
-    borderWidth:       1,
-    borderColor:       '#f0f0f0',
-    paddingVertical:   8,
-    paddingHorizontal: 12,
-    marginBottom:      14,
-  },
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      color:         theme.textDisabled,
+      letterSpacing: 1.1,
+      marginBottom:  10,
+    },
 
-  navArrow: {
-    padding: 2,
-  },
-  navArrowDisabled: {
-    opacity: 0.25,
-  },
-  navArrowText: {
-    fontSize:   24,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 28,
-  },
-  navArrowTextDisabled: {
-    color: '#bbb',
-  },
-  navLabel: {
-    flex:       1,
-    textAlign:  'center',
-    fontSize:   13,
-    fontWeight: '600',
-    color:      '#333',
-  },
+    navRow: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+      backgroundColor:   theme.bgInput,
+      borderRadius:      12,
+      borderWidth:       1,
+      borderColor:       theme.border,
+      paddingVertical:   8,
+      paddingHorizontal: 12,
+      marginBottom:      14,
+    },
 
-  barsRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-  },
+    navArrow:         { padding: 2 },
+    navArrowDisabled: { opacity: 0.25 },
+    navArrowText: {
+      fontSize:   24,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 28,
+    },
+    navArrowTextDisabled: { color: theme.textDisabled },
+    navLabel: {
+      flex:       1,
+      textAlign:  'center',
+      fontSize:   13,
+      fontWeight: '600',
+      color:      theme.textPrimary,
+    },
 
-  legend: {
-    flexDirection:  'row',
-    flexWrap:       'wrap',
-    gap:            10,
-    marginTop:      14,
-    paddingTop:     12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           5,
-  },
-  legendDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-  },
-  legendLabel: {
-    fontSize:   12,
-    color:      '#666',
-    fontWeight: '500',
-  },
-});
+    barsRow: {
+      flexDirection: 'row',
+      alignItems:    'flex-end',
+    },
+
+    legend: {
+      flexDirection:  'row',
+      flexWrap:       'wrap',
+      gap:            10,
+      marginTop:      14,
+      paddingTop:     12,
+      borderTopWidth: 1,
+      borderTopColor: theme.separator,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           5,
+    },
+    legendDot: {
+      width:        8,
+      height:       8,
+      borderRadius: 4,
+    },
+    legendLabel: {
+      fontSize:   12,
+      color:      theme.textSecondary,
+      fontWeight: '500',
+    },
+  });
+}

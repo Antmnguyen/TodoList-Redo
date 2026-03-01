@@ -72,6 +72,7 @@ import { CategoryYearOverviewGraph } from '../../../components/stats/detail/over
 // ── Types ─────────────────────────────────────────────────────────────────────
 import { StatDetailParams } from '../../../core/types/statDetailTypes';
 import { useStats }         from '../../../core/hooks/useStats';
+import { useTheme }         from '../../../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
@@ -109,6 +110,7 @@ export const OverallDetailScreen: React.FC<OverallDetailScreenProps> = ({
   params,
   onBack,
 }) => {
+  const { theme } = useTheme();
   const stats  = useStats();
   // Static fields — recomputed only if the bucket changes (params.id).
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,7 +197,7 @@ export const OverallDetailScreen: React.FC<OverallDetailScreenProps> = ({
   const showCategoryYear = bucket === 'year' || bucket === 'all_time';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ── Fixed header ────────────────────────────────────────────────── */}
       <DetailHeader

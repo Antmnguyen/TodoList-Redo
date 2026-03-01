@@ -15,8 +15,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -53,6 +55,8 @@ export const WeeklyMiniChart: React.FC<WeeklyMiniChartProps> = ({
   maxHeight = 28,
   barWidth = 13,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const maxCount = Math.max(...data.map(d => d.count), 1); // avoid divide-by-zero
 
   return (
@@ -75,7 +79,7 @@ export const WeeklyMiniChart: React.FC<WeeklyMiniChartProps> = ({
                   width: barWidth,
                   height: barHeight,
                   borderRadius: 3,
-                  backgroundColor: hasActivity ? color : '#e0e0e0',
+                  backgroundColor: hasActivity ? color : theme.separator,
                 }}
               />
             </View>
@@ -102,28 +106,30 @@ export const WeeklyMiniChart: React.FC<WeeklyMiniChartProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    alignSelf: 'stretch',
-  },
-  barsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  barWrapper: {
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  labelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  dayLabel: {
-    fontSize: 9,
-    color: '#aaa',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      alignSelf: 'stretch',
+    },
+    barsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+    },
+    barWrapper: {
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    labelsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 4,
+    },
+    dayLabel: {
+      fontSize: 9,
+      color: theme.textTertiary,
+      textAlign: 'center',
+      fontWeight: '500',
+    },
+  });
+}

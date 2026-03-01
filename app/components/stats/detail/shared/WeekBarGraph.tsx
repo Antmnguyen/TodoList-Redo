@@ -40,10 +40,12 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DayData } from '../../WeeklyMiniChart';
 import { safePct } from '../../../../core/utils/statUtils';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // CONSTANTS
@@ -124,6 +126,9 @@ interface BarColumnProps {
  * Bar height is proportional to count / maxCount, clamped to BAR_MIN_HEIGHT.
  */
 const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) => {
+  const { theme } = useTheme();
+  const colStyles = useMemo(() => makeColStyles(theme), [theme]);
+
   const hasActivity = item.count > 0;
 
   // Whether this day has a known denominator (tasks scheduled) for a true rate
@@ -154,8 +159,8 @@ const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) =>
   });
 
   return (
-    <View style={col.container}>
-      <View style={[col.barArea, { height: BAR_MAX_HEIGHT }]}>
+    <View style={colStyles.container}>
+      <View style={[colStyles.barArea, { height: BAR_MAX_HEIGHT }]}>
         {item.segments && segHeights ? (
           <View style={{ width: BAR_WIDTH, overflow: 'hidden', borderRadius: 5 }}>
             {[...item.segments].reverse().map((seg, i) => (
@@ -168,49 +173,23 @@ const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) =>
         ) : (
           <View
             style={[
-              col.bar,
+              colStyles.bar,
               {
                 height:          barHeight,
                 width:           BAR_WIDTH,
-                backgroundColor: hasActivity ? color : '#e8e8e8',
+                backgroundColor: hasActivity ? color : theme.separator,
               },
             ]}
           />
         )}
       </View>
-      <Text style={col.dayLabel}>{item.day}</Text>
-      <Text style={[col.valueLabel, hasActivity && { color }]}>
+      <Text style={colStyles.dayLabel}>{item.day}</Text>
+      <Text style={[colStyles.valueLabel, hasActivity && { color }]}>
         {displayValue}
       </Text>
     </View>
   );
 };
-
-const col = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    flex:       1,
-  },
-  barArea: {
-    justifyContent: 'flex-end',
-    alignItems:     'center',
-  },
-  bar: {
-    borderRadius: 5,
-  },
-  dayLabel: {
-    fontSize:   12,
-    color:      '#aaa',
-    fontWeight: '600',
-    marginTop:  6,
-  },
-  valueLabel: {
-    fontSize:   11,
-    color:      '#ccc',
-    fontWeight: '500',
-    marginTop:  2,
-  },
-});
 
 // =============================================================================
 // COMPONENT
@@ -222,6 +201,9 @@ export const WeekBarGraph: React.FC<WeekBarGraphProps> = ({
   initialWeekStart,
   onWeekChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // Toggle state — parent doesn't need to know which mode is active
   const [mode, setMode] = useState<DisplayMode>('count');
 
@@ -332,100 +314,130 @@ export const WeekBarGraph: React.FC<WeekBarGraphProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      flex:       1,
+    },
+    barArea: {
+      justifyContent: 'flex-end',
+      alignItems:     'center',
+    },
+    bar: {
+      borderRadius: 5,
+    },
+    dayLabel: {
+      fontSize:   12,
+      color:      theme.textTertiary,
+      fontWeight: '600',
+      marginTop:  6,
+    },
+    valueLabel: {
+      fontSize:   11,
+      color:      theme.textDisabled,
+      fontWeight: '500',
+      marginTop:  2,
+    },
+  });
+}
 
-  headerRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   10,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    color:         '#ccc',
-    letterSpacing: 1.1,
-    flexShrink:    1,
-  },
+    headerRow: {
+      flexDirection:  'row',
+      justifyContent: 'space-between',
+      alignItems:     'center',
+      marginBottom:   10,
+    },
 
-  // ── Week navigator row ─────────────────────────────────────────────────────
-  navRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    backgroundColor:   '#fafafa',
-    borderRadius:      12,
-    borderWidth:       1,
-    borderColor:       '#f0f0f0',
-    paddingVertical:   8,
-    paddingHorizontal: 12,
-    marginBottom:      14,
-  },
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      color:         theme.textDisabled,
+      letterSpacing: 1.1,
+      flexShrink:    1,
+    },
 
-  navArrow: {
-    padding: 2,
-  },
+    // ── Week navigator row ─────────────────────────────────────────────────────
+    navRow: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+      backgroundColor:   theme.bgInput,
+      borderRadius:      12,
+      borderWidth:       1,
+      borderColor:       theme.border,
+      paddingVertical:   8,
+      paddingHorizontal: 12,
+      marginBottom:      14,
+    },
 
-  navArrowDisabled: {
-    opacity: 0.25,
-  },
+    navArrow: {
+      padding: 2,
+    },
 
-  navArrowText: {
-    fontSize:   24,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 28,
-  },
+    navArrowDisabled: {
+      opacity: 0.25,
+    },
 
-  navArrowTextDisabled: {
-    color: '#bbb',
-  },
+    navArrowText: {
+      fontSize:   24,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 28,
+    },
 
-  navLabel: {
-    flex:       1,
-    textAlign:  'center',
-    fontSize:   13,
-    fontWeight: '600',
-    color:      '#333',
-  },
+    navArrowTextDisabled: {
+      color: theme.textDisabled,
+    },
 
-  // Count / % toggle pill
-  toggle: {
-    flexDirection:   'row',
-    backgroundColor: '#f2f2f2',
-    borderRadius:    8,
-    padding:         2,
-    gap:             2,
-  },
-  toggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      7,
-  },
-  toggleLabel: {
-    fontSize:   12,
-    fontWeight: '600',
-    color:      '#999',
-  },
-  toggleLabelActive: {
-    color: '#fff',
-  },
+    navLabel: {
+      flex:       1,
+      textAlign:  'center',
+      fontSize:   13,
+      fontWeight: '600',
+      color:      theme.textPrimary,
+    },
 
-  barsRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-  },
-});
+    // Count / % toggle pill
+    toggle: {
+      flexDirection:   'row',
+      backgroundColor: theme.separator,
+      borderRadius:    8,
+      padding:         2,
+      gap:             2,
+    },
+    toggleBtn: {
+      paddingHorizontal: 10,
+      paddingVertical:   5,
+      borderRadius:      7,
+    },
+    toggleLabel: {
+      fontSize:   12,
+      fontWeight: '600',
+      color:      theme.textTertiary,
+    },
+    toggleLabelActive: {
+      color: '#fff',
+    },
+
+    barsRow: {
+      flexDirection: 'row',
+      alignItems:    'flex-end',
+    },
+  });
+}

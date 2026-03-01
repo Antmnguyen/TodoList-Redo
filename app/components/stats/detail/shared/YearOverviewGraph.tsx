@@ -42,10 +42,12 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { safePct } from '../../../../core/utils/statUtils';
 import { DataSegment } from '../../WeeklyMiniChart';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -106,18 +108,22 @@ const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', '
 // =============================================================================
 
 interface MonthBarProps {
-  item:     MonthData;
-  maxCount: number;
-  color:    string;
-  isFuture: boolean;
-  mode:     DisplayMode;
+  item:        MonthData;
+  maxCount:    number;
+  color:       string;
+  isFuture:    boolean;
+  mode:        DisplayMode;
+  emptyColor:  string;
 }
 
 /**
  * Renders one month column: a vertical bar, a single-character month initial,
  * and a value label beneath it.
  */
-const MonthBar: React.FC<MonthBarProps> = ({ item, maxCount, color, isFuture, mode }) => {
+const MonthBar: React.FC<MonthBarProps> = ({ item, maxCount, color, isFuture, mode, emptyColor }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeColStyles(theme), [theme]);
+
   const hasActivity = item.completed > 0;
   const hasTotal    = item.total > 0;
 
@@ -139,7 +145,7 @@ const MonthBar: React.FC<MonthBarProps> = ({ item, maxCount, color, isFuture, mo
     return String(item.completed);
   })();
 
-  const barColor = hasActivity ? color : '#e8e8e8';
+  const barColor = hasActivity ? color : emptyColor;
 
   // ── Segment heights (stacked bar) ────────────────────────────────────────
   const segHeights = item.segments?.map(seg => {
@@ -150,8 +156,8 @@ const MonthBar: React.FC<MonthBarProps> = ({ item, maxCount, color, isFuture, mo
   });
 
   return (
-    <View style={[col.container, isFuture && col.future]}>
-      <View style={[col.barArea, { height: BAR_MAX_HEIGHT }]}>
+    <View style={[styles.container, isFuture && styles.future]}>
+      <View style={[styles.barArea, { height: BAR_MAX_HEIGHT }]}>
         {item.segments && segHeights ? (
           <View style={{ width: 14, overflow: 'hidden', borderRadius: 4 }}>
             {[...item.segments].reverse().map((seg, i) => (
@@ -162,46 +168,48 @@ const MonthBar: React.FC<MonthBarProps> = ({ item, maxCount, color, isFuture, mo
             ))}
           </View>
         ) : (
-          <View style={[col.bar, { height: barHeight, backgroundColor: barColor }]} />
+          <View style={[styles.bar, { height: barHeight, backgroundColor: barColor }]} />
         )}
       </View>
-      <Text style={col.monthLabel}>{MONTH_INITIALS[item.month]}</Text>
-      <Text style={[col.valueLabel, hasActivity && { color }]}>
+      <Text style={styles.monthLabel}>{MONTH_INITIALS[item.month]}</Text>
+      <Text style={[styles.valueLabel, hasActivity && { color }]}>
         {valueLabel}
       </Text>
     </View>
   );
 };
 
-const col = StyleSheet.create({
-  container: {
-    flex:       1,
-    alignItems: 'center',
-  },
-  future: {
-    opacity: 0.3,
-  },
-  barArea: {
-    justifyContent: 'flex-end',
-    alignItems:     'center',
-  },
-  bar: {
-    width:        14,
-    borderRadius: 4,
-  },
-  monthLabel: {
-    fontSize:   11,
-    color:      '#bbb',
-    fontWeight: '600',
-    marginTop:  5,
-  },
-  valueLabel: {
-    fontSize:   9,
-    color:      '#ccc',
-    fontWeight: '500',
-    marginTop:  1,
-  },
-});
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex:       1,
+      alignItems: 'center',
+    },
+    future: {
+      opacity: 0.3,
+    },
+    barArea: {
+      justifyContent: 'flex-end',
+      alignItems:     'center',
+    },
+    bar: {
+      width:        14,
+      borderRadius: 4,
+    },
+    monthLabel: {
+      fontSize:   11,
+      color:      theme.textDisabled,
+      fontWeight: '600',
+      marginTop:  5,
+    },
+    valueLabel: {
+      fontSize:   9,
+      color:      theme.textDisabled,
+      fontWeight: '500',
+      marginTop:  1,
+    },
+  });
+}
 
 // =============================================================================
 // COMPONENT
@@ -223,6 +231,9 @@ export const YearOverviewGraph: React.FC<YearOverviewGraphProps> = ({
   initialYear,
   onYearChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const currentYear = new Date().getFullYear();
 
   // Internal toggle state
@@ -331,6 +342,7 @@ export const YearOverviewGraph: React.FC<YearOverviewGraphProps> = ({
               color={color}
               isFuture={isFuture}
               mode={mode}
+              emptyColor={theme.border}
             />
           );
         })}
@@ -344,93 +356,95 @@ export const YearOverviewGraph: React.FC<YearOverviewGraphProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  /** Row holding the year nav on the left and toggle on the right */
-  headerRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    marginBottom:   6,
-  },
+    /** Row holding the year nav on the left and toggle on the right */
+    headerRow: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      justifyContent: 'space-between',
+      marginBottom:   6,
+    },
 
-  /** Inline nav: ‹ · year label · › */
-  yearNav: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
+    /** Inline nav: ‹ · year label · › */
+    yearNav: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           6,
+    },
 
-  navArrow: {
-    padding: 2,
-  },
+    navArrow: {
+      padding: 2,
+    },
 
-  navArrowDisabled: {
-    opacity: 0.25,
-  },
+    navArrowDisabled: {
+      opacity: 0.25,
+    },
 
-  navArrowText: {
-    fontSize:   22,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 26,
-  },
+    navArrowText: {
+      fontSize:   22,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 26,
+    },
 
-  navArrowTextDisabled: {
-    color: '#bbb',
-  },
+    navArrowTextDisabled: {
+      color: theme.textDisabled,
+    },
 
-  yearLabel: {
-    fontSize:   16,
-    fontWeight: '700',
-    color:      '#333',
-  },
+    yearLabel: {
+      fontSize:   16,
+      fontWeight: '700',
+      color:      theme.textPrimary,
+    },
 
-  /** "YEAR OVERVIEW" / "YEAR COMPLETION RATE" — small caps style subtitle */
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    color:         '#ccc',
-    letterSpacing: 1.1,
-    marginBottom:  14,
-  },
+    /** "YEAR OVERVIEW" / "YEAR COMPLETION RATE" — small caps style subtitle */
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      color:         theme.textDisabled,
+      letterSpacing: 1.1,
+      marginBottom:  14,
+    },
 
-  // ── Count / % toggle pill ──────────────────────────────────────────────
-  toggle: {
-    flexDirection:   'row',
-    backgroundColor: '#f2f2f2',
-    borderRadius:    8,
-    padding:         2,
-    gap:             2,
-  },
-  toggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      7,
-  },
-  toggleLabel: {
-    fontSize:   12,
-    fontWeight: '600',
-    color:      '#999',
-  },
-  toggleLabelActive: {
-    color: '#fff',
-  },
+    // ── Count / % toggle pill ──────────────────────────────────────────────
+    toggle: {
+      flexDirection:   'row',
+      backgroundColor: theme.bgInput,
+      borderRadius:    8,
+      padding:         2,
+      gap:             2,
+    },
+    toggleBtn: {
+      paddingHorizontal: 10,
+      paddingVertical:   5,
+      borderRadius:      7,
+    },
+    toggleLabel: {
+      fontSize:   12,
+      fontWeight: '600',
+      color:      theme.textTertiary,
+    },
+    toggleLabelActive: {
+      color: '#fff',
+    },
 
-  barsRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-  },
-});
+    barsRow: {
+      flexDirection: 'row',
+      alignItems:    'flex-end',
+    },
+  });
+}

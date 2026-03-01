@@ -35,6 +35,7 @@ import { TaskList } from '../../components/tasks/TaskList';
 import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
 import { sortTasksByCompletion } from '../../core/utils/taskSorting';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
 
 // =============================================================================
 // COMPONENT
@@ -49,6 +50,7 @@ export const AllTasksScreen: React.FC = () => {
   //   editTask   — updates a task's title or due date by its ID
   // Location: app/core/hooks/useTasks.ts
   // ---------------------------------------------------------------------------
+  const { theme } = useTheme();
   const { tasks, toggleTask, removeTask, editTask } = useTasks();
 
   // ---------------------------------------------------------------------------
@@ -104,7 +106,7 @@ export const AllTasksScreen: React.FC = () => {
   // ---------------------------------------------------------------------------
   return (
     // SafeAreaView ensures content doesn't overlap the phone's notch or home bar
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ===================================================================
           HEADER BANNER

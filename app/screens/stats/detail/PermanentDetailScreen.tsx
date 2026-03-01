@@ -52,6 +52,7 @@ import { DayOfWeekPatternCard } from '../../../components/stats/detail/shared/Da
 // ── Types ─────────────────────────────────────────────────────────────────────
 import { StatDetailParams } from '../../../core/types/statDetailTypes';
 import { useStats }         from '../../../core/hooks/useStats';
+import { useTheme }         from '../../../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
@@ -72,6 +73,7 @@ export const PermanentDetailScreen: React.FC<PermanentDetailScreenProps> = ({
   params,
   onBack,
 }) => {
+  const { theme } = useTheme();
   const stats = useStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const data  = useMemo(() => stats.getPermanentDetail(params.id), [params.id]);
@@ -84,7 +86,7 @@ export const PermanentDetailScreen: React.FC<PermanentDetailScreenProps> = ({
 
   return (
     // flex: 1 so the screen fills the overlay container in MainNavigator
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ── Fixed header — not scrollable ───────────────────────────────── */}
       <DetailHeader

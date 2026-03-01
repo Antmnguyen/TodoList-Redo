@@ -32,8 +32,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -63,92 +65,106 @@ interface StreakPillProps {
  * One half of the streak card — an emoji icon, a label, and the day count.
  * Used twice: once for current streak and once for best streak.
  */
-const StreakPill: React.FC<StreakPillProps> = ({ emoji, label, days, color }) => (
-  <View style={pill.box}>
-    <View style={pill.topRow}>
-      <Text style={pill.emoji}>{emoji}</Text>
-      <Text style={pill.label}>{label}</Text>
-    </View>
+const StreakPill: React.FC<StreakPillProps> = ({ emoji, label, days, color }) => {
+  const { theme } = useTheme();
+  const pillStyles = useMemo(() => makePillStyles(theme), [theme]);
 
-    <View style={pill.countRow}>
-      <Text style={[pill.count, { color }]}>{days}</Text>
-      <Text style={pill.unit}> days</Text>
-    </View>
-  </View>
-);
+  return (
+    <View style={pillStyles.box}>
+      <View style={pillStyles.topRow}>
+        <Text style={pillStyles.emoji}>{emoji}</Text>
+        <Text style={pillStyles.label}>{label}</Text>
+      </View>
 
-const pill = StyleSheet.create({
-  box: {
-    flex:            1,
-    backgroundColor: '#fafafa',
-    borderRadius:    14,
-    borderWidth:     1,
-    borderColor:     '#f0f0f0',
-    padding:         14,
-    gap:             6,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
-  emoji: {
-    fontSize: 18,
-  },
-  label: {
-    fontSize:   13,
-    color:      '#999',
-    fontWeight: '600',
-  },
-  countRow: {
-    flexDirection: 'row',
-    alignItems:    'baseline',
-  },
-  count: {
-    fontSize:   28,
-    fontWeight: '800',
-    lineHeight: 32,
-  },
-  unit: {
-    fontSize:   14,
-    color:      '#aaa',
-    fontWeight: '500',
-  },
-});
+      <View style={pillStyles.countRow}>
+        <Text style={[pillStyles.count, { color }]}>{days}</Text>
+        <Text style={pillStyles.unit}> days</Text>
+      </View>
+    </View>
+  );
+};
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export const StreakCard: React.FC<StreakCardProps> = ({ currentStreak, bestStreak, color }) => (
-  <View style={styles.card}>
-    <StreakPill
-      emoji="🔥"
-      label="Current Streak!"
-      days={currentStreak}
-      color={color}
-    />
+export const StreakCard: React.FC<StreakCardProps> = ({ currentStreak, bestStreak, color }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
-    {/* Gap between the two pills */}
-    <View style={{ width: 10 }} />
+  return (
+    <View style={styles.card}>
+      <StreakPill
+        emoji="🔥"
+        label="Current Streak!"
+        days={currentStreak}
+        color={color}
+      />
 
-    <StreakPill
-      emoji="🏆"
-      label="Best"
-      days={bestStreak}
-      color={color}
-    />
-  </View>
-);
+      {/* Gap between the two pills */}
+      <View style={{ width: 10 }} />
+
+      <StreakPill
+        emoji="🏆"
+        label="Best"
+        days={bestStreak}
+        color={color}
+      />
+    </View>
+  );
+};
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection:    'row',
-    marginHorizontal: 16,
-    marginBottom:     12,
-  },
-});
+function makePillStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    box: {
+      flex:            1,
+      backgroundColor: theme.bgCard,
+      borderRadius:    14,
+      borderWidth:     1,
+      borderColor:     theme.border,
+      padding:         14,
+      gap:             6,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           6,
+    },
+    emoji: {
+      fontSize: 18,
+    },
+    label: {
+      fontSize:   13,
+      color:      theme.textTertiary,
+      fontWeight: '600',
+    },
+    countRow: {
+      flexDirection: 'row',
+      alignItems:    'baseline',
+    },
+    count: {
+      fontSize:   28,
+      fontWeight: '800',
+      lineHeight: 32,
+    },
+    unit: {
+      fontSize:   14,
+      color:      theme.textTertiary,
+      fontWeight: '500',
+    },
+  });
+}
+
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      flexDirection:    'row',
+      marginHorizontal: 16,
+      marginBottom:     12,
+    },
+  });
+}

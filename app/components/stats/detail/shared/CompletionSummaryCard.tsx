@@ -31,10 +31,12 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CircularProgress } from '../../CircularProgress';
 import { safePct } from '../../../../core/utils/statUtils';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -58,6 +60,8 @@ export const CompletionSummaryCard: React.FC<CompletionSummaryCardProps> = ({
   total,
   color,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const rate = safePct(completed, total);
 
   return (
@@ -96,72 +100,73 @@ export const CompletionSummaryCard: React.FC<CompletionSummaryCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    // Matches the card visual language from TodayCard
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: theme.bgCard,
+      borderRadius: 20,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      padding: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
+    },
 
-  ringWrapper: {
-    width: 90,
-    height: 90,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    ringWrapper: {
+      width: 90,
+      height: 90,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  percentageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    percentageOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  innerPercentText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1B',
-  },
+    innerPercentText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.textPrimary,
+    },
 
-  textBlock: {
-    flex: 1,
-    marginLeft: 20,
-    justifyContent: 'center',
-  },
+    textBlock: {
+      flex: 1,
+      marginLeft: 20,
+      justifyContent: 'center',
+    },
 
-  countRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
+    countRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 4,
+    },
 
-  // Large number — most prominent piece of information
-  countNum: {
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
+    // Large number — most prominent piece of information
+    countNum: {
+      fontSize: 36,
+      fontWeight: '800',
+      letterSpacing: -1,
+    },
 
-  countLabel: {
-    fontSize: 16,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
+    countLabel: {
+      fontSize: 16,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
 
-  // "156 / 200 total" — de-emphasised helper text
-  totalText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '400',
-    marginTop: 2,
-  },
-});
+    // "156 / 200 total" — de-emphasised helper text
+    totalText: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      fontWeight: '400',
+      marginTop: 2,
+    },
+  });
+}

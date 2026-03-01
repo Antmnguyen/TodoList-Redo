@@ -35,6 +35,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { getArchivedTasks, ArchivedTask } from '../../core/services/storage/archiveStorage';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -47,8 +49,8 @@ export interface HistoryManagementScreenProps {
 type FilterTab = 'all' | 'today' | 'week' | 'month' | 'year';
 
 type Section = {
-  title:   string;       // formatted date string shown as section header
-  dateKey: string;       // 'YYYY-MM-DD' — used as React key
+  title:   string;
+  dateKey: string;
   data:    ArchivedTask[];
 };
 
@@ -70,21 +72,15 @@ const FILTER_LABELS: Record<FilterTab, string> = {
 // HELPERS
 // =============================================================================
 
-/**
- * Returns the fromMs / toMs bounds for each filter tab.
- * All bounds are computed relative to the current moment — call this
- * inside useMemo so re-renders pick up date changes correctly.
- */
 function getFilterRange(tab: FilterTab): { fromMs?: number; toMs?: number } {
   const now = new Date();
 
-  // End-of-today is shared by every bounded filter.
   const endOfToday = new Date(now);
   endOfToday.setHours(23, 59, 59, 999);
 
   switch (tab) {
     case 'all':
-      return {};   // no bounds → full table
+      return {};
 
     case 'today': {
       const start = new Date(now);
@@ -93,9 +89,8 @@ function getFilterRange(tab: FilterTab): { fromMs?: number; toMs?: number } {
     }
 
     case 'week': {
-      // ISO week: Monday is day 1. Compute how many days back to Monday.
       const start = new Date(now);
-      const daysToMonday = (start.getDay() + 6) % 7; // Sun=0 → 6, Mon=1 → 0
+      const daysToMonday = (start.getDay() + 6) % 7;
       start.setDate(start.getDate() - daysToMonday);
       start.setHours(0, 0, 0, 0);
       return { fromMs: start.getTime(), toMs: endOfToday.getTime() };
@@ -113,10 +108,6 @@ function getFilterRange(tab: FilterTab): { fromMs?: number; toMs?: number } {
   }
 }
 
-/**
- * Groups an array of ArchivedTask (already sorted newest-first by the DB)
- * into sections keyed by local calendar day.
- */
 function groupByDay(tasks: ArchivedTask[]): Section[] {
   const map = new Map<string, ArchivedTask[]>();
 
@@ -148,10 +139,11 @@ function groupByDay(tasks: ArchivedTask[]): Section[] {
 // =============================================================================
 
 export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = ({ onBack }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
-  // Re-compute whenever the active filter changes.
-  // getArchivedTasks is synchronous — no async/loading state needed.
   const sections = useMemo<Section[]>(() => {
     const { fromMs, toMs } = getFilterRange(activeFilter);
     const tasks = getArchivedTasks(fromMs, toMs);
@@ -176,7 +168,6 @@ export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = (
 
         <Text style={styles.title}>History</Text>
 
-        {/* Right-side spacer keeps title visually centred */}
         <View style={styles.headerSpacer} />
       </View>
 
@@ -229,15 +220,12 @@ export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = (
 
           renderItem={({ item }) => (
             <View style={styles.row}>
-              {/* Completion tick */}
               <Text style={styles.checkmark}>✓</Text>
 
-              {/* Task title — flex so it fills remaining space */}
               <Text style={styles.rowTitle} numberOfLines={1}>
                 {item.title}
               </Text>
 
-              {/* Right cluster: category badge + recurring indicator */}
               <View style={styles.rowRight}>
                 {item.categoryName ? (
                   <View style={styles.categoryBadge}>
@@ -247,7 +235,6 @@ export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = (
                   </View>
                 ) : null}
 
-                {/* 🔁 shown only for permanent task instances */}
                 {item.wasRecurring ? (
                   <Text style={styles.recurringIcon}>🔁</Text>
                 ) : null}
@@ -267,149 +254,151 @@ export const HistoryManagementScreen: React.FC<HistoryManagementScreenProps> = (
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.bgScreen,
+    },
 
-  // ── Header ──────────────────────────────────────────────────────────────────
-  header: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    justifyContent:   'space-between',
-    paddingHorizontal: 16,
-    paddingTop:        60,
-    paddingBottom:     16,
-    backgroundColor:  '#5856D6',
-  },
-  backBtn: {
-    padding: 4,
-  },
-  backText: {
-    fontSize:   16,
-    color:      '#fff',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize:   20,
-    fontWeight: '700',
-    color:      '#fff',
-  },
-  headerSpacer: {
-    width: 60,
-  },
+    // ── Header ──────────────────────────────────────────────────────────────────
+    header: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+      paddingHorizontal: 16,
+      paddingTop:        60,
+      paddingBottom:     16,
+      backgroundColor:   '#5856D6',  // brand colour — stays same in dark mode
+    },
+    backBtn: {
+      padding: 4,
+    },
+    backText: {
+      fontSize:   16,
+      color:      '#fff',
+      fontWeight: '500',
+    },
+    title: {
+      fontSize:   20,
+      fontWeight: '700',
+      color:      '#fff',
+    },
+    headerSpacer: {
+      width: 60,
+    },
 
-  // ── Filter tab bar ───────────────────────────────────────────────────────────
-  filterBar: {
-    backgroundColor:   '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    maxHeight:         52,
-  },
-  filterBarContent: {
-    paddingHorizontal: 12,
-    paddingVertical:   10,
-    gap:               8,
-    flexDirection:     'row',
-  },
-  filterTab: {
-    paddingHorizontal: 14,
-    paddingVertical:   5,
-    borderRadius:      16,
-    backgroundColor:   '#f0f0f0',
-  },
-  filterTabActive: {
-    backgroundColor: '#5856D6',
-  },
-  filterTabText: {
-    fontSize:   13,
-    fontWeight: '500',
-    color:      '#555',
-  },
-  filterTabTextActive: {
-    color: '#fff',
-  },
+    // ── Filter tab bar ───────────────────────────────────────────────────────────
+    filterBar: {
+      backgroundColor:   theme.bgCard,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      maxHeight:         60,
+    },
+    filterBarContent: {
+      paddingHorizontal: 12,
+      paddingVertical:   10,
+      gap:               8,
+      flexDirection:     'row',
+    },
+    filterTab: {
+      paddingHorizontal: 14,
+      paddingVertical:   8,
+      borderRadius:      16,
+      backgroundColor:   theme.bgInput,
+    },
+    filterTabActive: {
+      backgroundColor: '#5856D6',
+    },
+    filterTabText: {
+      fontSize:   13,
+      fontWeight: '500',
+      color:      theme.textSecondary,
+    },
+    filterTabTextActive: {
+      color: '#fff',
+    },
 
-  // ── Section headers ──────────────────────────────────────────────────────────
-  sectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical:   7,
-    backgroundColor:   '#ececec',
-  },
-  sectionHeaderText: {
-    fontSize:      12,
-    fontWeight:    '600',
-    color:         '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
+    // ── Section headers ──────────────────────────────────────────────────────────
+    sectionHeader: {
+      paddingHorizontal: 16,
+      paddingVertical:   7,
+      backgroundColor:   theme.bgInput,
+    },
+    sectionHeaderText: {
+      fontSize:      12,
+      fontWeight:    '600',
+      color:         theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
 
-  // ── Task rows ────────────────────────────────────────────────────────────────
-  listContent: {
-    paddingBottom: 32,
-  },
-  row: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    paddingHorizontal: 16,
-    paddingVertical:   12,
-    backgroundColor:   '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e8e8e8',
-  },
-  checkmark: {
-    fontSize:    14,
-    color:       '#34C759',
-    fontWeight:  '700',
-    marginRight: 10,
-  },
-  rowTitle: {
-    flex:     1,
-    fontSize: 15,
-    color:    '#222',
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-    marginLeft:    8,
-    flexShrink:    0,
-  },
-  categoryBadge: {
-    paddingHorizontal: 7,
-    paddingVertical:   2,
-    borderRadius:      10,
-    backgroundColor:   '#e0e0e0',
-    maxWidth:          100,
-  },
-  categoryBadgeText: {
-    fontSize:   11,
-    color:      '#555',
-    fontWeight: '500',
-  },
-  recurringIcon: {
-    fontSize: 12,
-  },
+    // ── Task rows ────────────────────────────────────────────────────────────────
+    listContent: {
+      paddingBottom: 32,
+    },
+    row: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      paddingHorizontal: 16,
+      paddingVertical:   12,
+      backgroundColor:   theme.bgCard,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.border,
+    },
+    checkmark: {
+      fontSize:    14,
+      color:       '#34C759',
+      fontWeight:  '700',
+      marginRight: 10,
+    },
+    rowTitle: {
+      flex:     1,
+      fontSize: 15,
+      color:    theme.textPrimary,
+    },
+    rowRight: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           6,
+      marginLeft:    8,
+      flexShrink:    0,
+    },
+    categoryBadge: {
+      paddingHorizontal: 7,
+      paddingVertical:   2,
+      borderRadius:      10,
+      backgroundColor:   theme.bgInput,
+      maxWidth:          100,
+    },
+    categoryBadgeText: {
+      fontSize:   11,
+      color:      theme.textSecondary,
+      fontWeight: '500',
+    },
+    recurringIcon: {
+      fontSize: 12,
+    },
 
-  // ── Empty state ──────────────────────────────────────────────────────────────
-  emptyState: {
-    flex:              1,
-    justifyContent:    'center',
-    alignItems:        'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize:     16,
-    fontWeight:   '600',
-    color:        '#555',
-    textAlign:    'center',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize:   14,
-    color:      '#888',
-    textAlign:  'center',
-    lineHeight: 20,
-  },
-});
+    // ── Empty state ──────────────────────────────────────────────────────────────
+    emptyState: {
+      flex:              1,
+      justifyContent:    'center',
+      alignItems:        'center',
+      paddingHorizontal: 32,
+    },
+    emptyTitle: {
+      fontSize:     16,
+      fontWeight:   '600',
+      color:        theme.textSecondary,
+      textAlign:    'center',
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontSize:   14,
+      color:      theme.textTertiary,
+      textAlign:  'center',
+      lineHeight: 20,
+    },
+  });
+}

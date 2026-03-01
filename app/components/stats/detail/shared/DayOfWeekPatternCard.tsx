@@ -47,10 +47,12 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { safePct } from '../../../../core/utils/statUtils';
 import { DataSegment } from '../../WeeklyMiniChart';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -154,23 +156,11 @@ interface DayBarProps {
 
 /**
  * One weekday column: vertical bar + single-char day label + value label.
- *
- * Count mode:
- *   Bar height proportional to count / maxCount.
- *   Label shows raw count number.
- *
- * Percent mode (with total):
- *   Bar height = count / total (true completion rate, full height = 100%).
- *   Label shows "X%" completion rate.
- *
- * Percent mode (no total):
- *   Falls back to count / maxCount for height; label shows relative %.
- *
- * Best day gets full accent color and a slightly wider bar.
- * Active non-best days get the accent at ~33% opacity.
- * Zero-completion days show a grey stub.
  */
 const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) => {
+  const { theme } = useTheme();
+  const colStyles = useMemo(() => makeColStyles(theme), [theme]);
+
   const hasActivity = item.count > 0;
   const hasTotal    = item.total != null && item.total > 0;
 
@@ -178,10 +168,8 @@ const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) 
   const barHeight = (() => {
     if (!hasActivity) return BAR_MIN_HEIGHT;
     if (mode === 'percent' && hasTotal) {
-      // True completion rate: full height = completed every scheduled occurrence
       return Math.max((item.count / item.total!) * BAR_MAX_HEIGHT, BAR_MIN_HEIGHT);
     }
-    // Count mode (or no total): relative to the busiest weekday
     return Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, BAR_MIN_HEIGHT);
   })();
 
@@ -199,8 +187,8 @@ const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) 
   const barColor = isBest
     ? color
     : hasActivity
-      ? color + '55'  // accent at ~33% opacity for non-best active days
-      : '#e8e8e8';    // grey stub for zero days
+      ? color + '55'       // accent at ~33% opacity for non-best active days
+      : theme.separator;   // grey stub for zero days
 
   // ── Segment heights (stacked bar) ────────────────────────────────────────
   const barWidth = isBest ? 20 : 16;
@@ -212,9 +200,9 @@ const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) 
   });
 
   return (
-    <View style={col.container}>
+    <View style={colStyles.container}>
       {/* Vertical bar — grows upward from the bottom of the bar area */}
-      <View style={[col.barArea, { height: BAR_MAX_HEIGHT }]}>
+      <View style={[colStyles.barArea, { height: BAR_MAX_HEIGHT }]}>
         {item.segments && segHeights ? (
           <View style={{ width: barWidth, overflow: 'hidden', borderRadius: 5 }}>
             {[...item.segments].reverse().map((seg, i) => (
@@ -227,11 +215,10 @@ const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) 
         ) : (
           <View
             style={[
-              col.bar,
+              colStyles.bar,
               {
                 height:          barHeight,
                 backgroundColor: barColor,
-                // Best day bar is slightly wider to draw the eye
                 width:           barWidth,
               },
             ]}
@@ -240,43 +227,17 @@ const DayBar: React.FC<DayBarProps> = ({ item, maxCount, color, isBest, mode }) 
       </View>
 
       {/* Single-char day label (M T W T F S S) */}
-      <Text style={[col.dayLabel, isBest && { color, fontWeight: '800' }]}>
+      <Text style={[colStyles.dayLabel, isBest && { color, fontWeight: '800' }]}>
         {item.day}
       </Text>
 
       {/* Count or % value beneath the day label */}
-      <Text style={[col.valueLabel, isBest && { color }]}>
+      <Text style={[colStyles.valueLabel, isBest && { color }]}>
         {valueLabel}
       </Text>
     </View>
   );
 };
-
-const col = StyleSheet.create({
-  container: {
-    flex:       1,
-    alignItems: 'center',
-  },
-  barArea: {
-    justifyContent: 'flex-end',
-    alignItems:     'center',
-  },
-  bar: {
-    borderRadius: 5,
-  },
-  dayLabel: {
-    fontSize:   12,
-    color:      '#aaa',
-    fontWeight: '600',
-    marginTop:  6,
-  },
-  valueLabel: {
-    fontSize:   10,
-    color:      '#ccc',
-    fontWeight: '500',
-    marginTop:  2,
-  },
-});
 
 // =============================================================================
 // COMPONENT
@@ -286,6 +247,9 @@ export const DayOfWeekPatternCard: React.FC<DayOfWeekPatternCardProps> = ({
   data,
   color,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // Toggle state is internal — parent does not need to manage it
   const [mode, setMode] = useState<DisplayMode>('count');
 
@@ -361,72 +325,101 @@ export const DayOfWeekPatternCard: React.FC<DayOfWeekPatternCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex:       1,
+      alignItems: 'center',
+    },
+    barArea: {
+      justifyContent: 'flex-end',
+      alignItems:     'center',
+    },
+    bar: {
+      borderRadius: 5,
+    },
+    dayLabel: {
+      fontSize:   12,
+      color:      theme.textTertiary,
+      fontWeight: '600',
+      marginTop:  6,
+    },
+    valueLabel: {
+      fontSize:   10,
+      color:      theme.textDisabled,
+      fontWeight: '500',
+      marginTop:  2,
+    },
+  });
+}
 
-  // Header row holds the title on the left and the toggle on the right
-  headerRow: {
-    flexDirection:  'row',
-    alignItems:     'flex-start',
-    justifyContent: 'space-between',
-    marginBottom:   16,
-    gap:            10,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  sectionLabel: {
-    // flex: 1 so the title wraps naturally and the toggle stays right-aligned
-    flex:          1,
-    fontSize:      11,
-    fontWeight:    '800',
-    color:         '#ccc',
-    letterSpacing: 1.0,
-    lineHeight:    15,
-  },
+    // Header row holds the title on the left and the toggle on the right
+    headerRow: {
+      flexDirection:  'row',
+      alignItems:     'flex-start',
+      justifyContent: 'space-between',
+      marginBottom:   16,
+      gap:            10,
+    },
 
-  // Count / % toggle pill — identical styling to WeekBarGraph toggle
-  toggle: {
-    flexDirection:   'row',
-    backgroundColor: '#f2f2f2',
-    borderRadius:    8,
-    padding:         2,
-    gap:             2,
-  },
-  toggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      7,
-  },
-  toggleLabel: {
-    fontSize:   12,
-    fontWeight: '600',
-    color:      '#999',
-  },
-  toggleLabelActive: {
-    color: '#fff',
-  },
+    sectionLabel: {
+      flex:          1,
+      fontSize:      11,
+      fontWeight:    '800',
+      color:         theme.textDisabled,
+      letterSpacing: 1.0,
+      lineHeight:    15,
+    },
 
-  barsRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-    marginBottom:  14,
-  },
+    // Count / % toggle pill
+    toggle: {
+      flexDirection:   'row',
+      backgroundColor: theme.separator,
+      borderRadius:    8,
+      padding:         2,
+      gap:             2,
+    },
+    toggleBtn: {
+      paddingHorizontal: 10,
+      paddingVertical:   5,
+      borderRadius:      7,
+    },
+    toggleLabel: {
+      fontSize:   12,
+      fontWeight: '600',
+      color:      theme.textTertiary,
+    },
+    toggleLabelActive: {
+      color: '#fff',
+    },
 
-  // Footer label beneath the bars — wording changes with mode
-  bestDayLabel: {
-    fontSize:   13,
-    color:      '#999',
-    fontWeight: '500',
-    textAlign:  'center',
-  },
-});
+    barsRow: {
+      flexDirection: 'row',
+      alignItems:    'flex-end',
+      marginBottom:  14,
+    },
+
+    // Footer label beneath the bars — wording changes with mode
+    bestDayLabel: {
+      fontSize:   13,
+      color:      theme.textTertiary,
+      fontWeight: '500',
+      textAlign:  'center',
+    },
+  });
+}

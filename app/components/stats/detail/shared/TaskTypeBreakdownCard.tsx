@@ -36,9 +36,11 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { safePct } from '../../../../core/utils/statUtils';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // CONSTANTS
@@ -83,52 +85,26 @@ interface TypeColumnProps {
  * Mirrors the visual structure of TypeMiniCard in TodayCard but without
  * the per-type progress bar (the shared bar below replaces that).
  */
-const TypeColumn: React.FC<TypeColumnProps> = ({ emoji, label, count, percent, color }) => (
-  <View style={col.container}>
-    {/* Emoji + label row */}
-    <View style={col.topRow}>
-      <Text style={col.emoji}>{emoji}</Text>
-      <Text style={col.label}>{label}</Text>
+const TypeColumn: React.FC<TypeColumnProps> = ({ emoji, label, count, percent, color }) => {
+  const { theme } = useTheme();
+  const colStyles = useMemo(() => makeColStyles(theme), [theme]);
+
+  return (
+    <View style={colStyles.container}>
+      {/* Emoji + label row */}
+      <View style={colStyles.topRow}>
+        <Text style={colStyles.emoji}>{emoji}</Text>
+        <Text style={colStyles.label}>{label}</Text>
+      </View>
+
+      {/* Large percentage — primary figure */}
+      <Text style={[colStyles.percent, { color }]}>{percent}%</Text>
+
+      {/* Raw count — secondary figure */}
+      <Text style={colStyles.count}>{count} tasks</Text>
     </View>
-
-    {/* Large percentage — primary figure */}
-    <Text style={[col.percent, { color }]}>{percent}%</Text>
-
-    {/* Raw count — secondary figure */}
-    <Text style={col.count}>{count} tasks</Text>
-  </View>
-);
-
-const col = StyleSheet.create({
-  container: {
-    flex:       1,
-    alignItems: 'center',
-    gap:        4,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
-  emoji: {
-    fontSize: 18,
-  },
-  label: {
-    fontSize:   13,
-    color:      '#888',
-    fontWeight: '600',
-  },
-  percent: {
-    fontSize:   28,
-    fontWeight: '800',
-    lineHeight: 32,
-  },
-  count: {
-    fontSize:   12,
-    color:      '#bbb',
-    fontWeight: '500',
-  },
-});
+  );
+};
 
 // =============================================================================
 // COMPONENT
@@ -139,6 +115,9 @@ export const TaskTypeBreakdownCard: React.FC<TaskTypeBreakdownCardProps> = ({
   oneOffCount,
   color,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const total = permanentCount + oneOffCount;
 
   // Compute each type's percentage of the total (not of its own scheduled tasks)
@@ -209,45 +188,80 @@ export const TaskTypeBreakdownCard: React.FC<TaskTypeBreakdownCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-    // Left border ties this card to the screen's accent color
-    borderLeftWidth:  4,
-  },
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex:       1,
+      alignItems: 'center',
+      gap:        4,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           6,
+    },
+    emoji: {
+      fontSize: 18,
+    },
+    label: {
+      fontSize:   13,
+      color:      theme.textTertiary,
+      fontWeight: '600',
+    },
+    percent: {
+      fontSize:   28,
+      fontWeight: '800',
+      lineHeight: 32,
+    },
+    count: {
+      fontSize:   12,
+      color:      theme.textDisabled,
+      fontWeight: '500',
+    },
+  });
+}
 
-  columnsRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    marginBottom:  16,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+      // Left border ties this card to the screen's accent color
+      borderLeftWidth:  4,
+    },
 
-  divider: {
-    width:           1,
-    height:          56,
-    backgroundColor: '#f0f0f0',
-    marginHorizontal: 8,
-  },
+    columnsRow: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      marginBottom:  16,
+    },
 
-  // Track background for the split bar
-  splitBarTrack: {
-    flexDirection:   'row',
-    height:          8,
-    borderRadius:    4,
-    backgroundColor: '#f0f0f0',
-    overflow:        'hidden',
-  },
+    divider: {
+      width:           1,
+      height:          56,
+      backgroundColor: theme.separator,
+      marginHorizontal: 8,
+    },
 
-  splitBarSegment: {
-    height: 8,
-  },
-});
+    // Track background for the split bar
+    splitBarTrack: {
+      flexDirection:   'row',
+      height:          8,
+      borderRadius:    4,
+      backgroundColor: theme.separator,
+      overflow:        'hidden',
+    },
+
+    splitBarSegment: {
+      height: 8,
+    },
+  });
+}

@@ -17,7 +17,7 @@
 //
 // =============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -29,6 +29,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -56,6 +58,9 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   onSave,
   onClose,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
@@ -161,7 +166,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               value={title}
               onChangeText={setTitle}
               placeholder="Enter task name"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textTertiary}
               autoFocus
             />
           </View>
@@ -218,112 +223,114 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  content: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-  },
-  closeButton: {
-    fontSize: 22,
-    color: '#666',
-  },
-  field: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 8,
-  },
-  input: {
-    fontSize: 16,
-    color: '#000',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  dateButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  dateButtonText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  dateButtonIcon: {
-    fontSize: 18,
-  },
-  datePickerContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  datePickerDone: {
-    alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  datePickerDoneText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  actions: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    content: {
+      backgroundColor: theme.bgCard,
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 12,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.textPrimary,
+    },
+    closeButton: {
+      fontSize: 22,
+      color: theme.textSecondary,
+    },
+    field: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    input: {
+      fontSize: 16,
+      color: theme.textPrimary,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      padding: 12,
+      backgroundColor: theme.bgInput,
+    },
+    dateButton: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      padding: 12,
+      backgroundColor: theme.bgInput,
+    },
+    dateButtonText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    dateButtonIcon: {
+      fontSize: 18,
+    },
+    datePickerContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+    },
+    datePickerDone: {
+      alignSelf: 'flex-end',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    datePickerDoneText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.accent,
+    },
+    actions: {
+      flexDirection: 'row',
+      padding: 20,
+      gap: 12,
+    },
+    cancelButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 8,
+      backgroundColor: theme.bgInput,
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    saveButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 8,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+    },
+    saveButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textOnAccent,
+    },
+  });
+}

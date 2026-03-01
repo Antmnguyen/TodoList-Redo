@@ -41,8 +41,10 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, LayoutChangeEvent, TouchableOpacity } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -98,9 +100,6 @@ const COLOR_MID   = '#FF9500';
 /** Red fill — <30% completion / proportion */
 const COLOR_LOW   = '#FF3B30';
 
-/** Grey track color — always shown for days with tasks, behind the colored fill */
-const TRACK_COLOR = '#DEDEDE';
-
 /** Thickness of both the grey track and the colored fill, in pixels */
 const BORDER_T = 4;
 
@@ -130,7 +129,7 @@ function getProgressInfo(
   maxCount: number,
 ): { hasData: boolean; fillProgress: number; fillColor: string } {
   if (!dayData || dayData.total === 0) {
-    return { hasData: false, fillProgress: 0, fillColor: TRACK_COLOR };
+    return { hasData: false, fillProgress: 0, fillColor: '' };
   }
 
   const fillProgress = mode === 'count'
@@ -202,6 +201,8 @@ interface DayCellProps {
   hasData:      boolean;
   fillProgress: number;
   fillColor:    string;
+  /** The grey ring track color — derived from theme.border in parent */
+  trackColor:   string;
 }
 
 const DayCell: React.FC<DayCellProps> = ({
@@ -210,20 +211,23 @@ const DayCell: React.FC<DayCellProps> = ({
   hasData,
   fillProgress,
   fillColor,
+  trackColor,
 }) => {
   const [cellSize, setCellSize] = useState(0);
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeCellStyles(theme), [theme]);
 
-  if (dayNumber === 0) return <View style={cell.box} />;
+  if (dayNumber === 0) return <View style={styles.box} />;
 
   const handleLayout = (e: LayoutChangeEvent) => {
     const w = Math.round(e.nativeEvent.layout.width);
     if (w !== cellSize) setCellSize(w);
   };
 
-  const textColor = hasData ? '#444444' : '#BBBBBB';
+  const textColor = hasData ? theme.textPrimary : theme.textDisabled;
 
   return (
-    <View style={cell.box} onLayout={handleLayout}>
+    <View style={styles.box} onLayout={handleLayout}>
 
       {hasData && (
         <View
@@ -233,7 +237,7 @@ const DayCell: React.FC<DayCellProps> = ({
             top: 0, left: 0, right: 0, bottom: 0,
             borderRadius: 8,
             borderWidth:  BORDER_T,
-            borderColor:  TRACK_COLOR,
+            borderColor:  trackColor,
           }}
         />
       )}
@@ -246,33 +250,35 @@ const DayCell: React.FC<DayCellProps> = ({
         />
       )}
 
-      <Text style={[cell.label, { color: textColor }, isToday && cell.todayLabel]}>
+      <Text style={[styles.label, { color: textColor }, isToday && styles.todayLabel]}>
         {dayNumber}
       </Text>
 
       {isToday && (
-        <View style={[cell.todayDot, { backgroundColor: hasData ? fillColor : '#AAAAAA' }]} />
+        <View style={[styles.todayDot, { backgroundColor: hasData ? fillColor : theme.textTertiary }]} />
       )}
 
     </View>
   );
 };
 
-const cell = StyleSheet.create({
-  box: {
-    flex:            1,
-    aspectRatio:     1,
-    margin:          2,
-    borderRadius:    8,
-    backgroundColor: '#F5F5F5',
-    alignItems:      'center',
-    justifyContent:  'center',
-    overflow:        'hidden',
-  },
-  label:      { fontSize: 13, fontWeight: '600' },
-  todayLabel: { fontSize: 14, fontWeight: '800', color: '#222222' },
-  todayDot:   { width: 4, height: 4, borderRadius: 2, marginTop: 2 },
-});
+function makeCellStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    box: {
+      flex:            1,
+      aspectRatio:     1,
+      margin:          2,
+      borderRadius:    8,
+      backgroundColor: theme.bgInput,
+      alignItems:      'center',
+      justifyContent:  'center',
+      overflow:        'hidden',
+    },
+    label:      { fontSize: 13, fontWeight: '600' },
+    todayLabel: { fontSize: 14, fontWeight: '800', color: theme.textPrimary },
+    todayDot:   { width: 4, height: 4, borderRadius: 2, marginTop: 2 },
+  });
+}
 
 // =============================================================================
 // COMPONENT
@@ -285,6 +291,13 @@ export const MonthCalendarGraph: React.FC<MonthCalendarGraphProps> = ({
   color,
   onMonthChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  // The grey ring track derives from theme.border — matches DEDEDE in light,
+  // becomes #3a3a3c (visible dark-mode grey) in dark.
+  const trackColor = theme.border;
+
   const [mode, setMode] = useState<DisplayMode>('percent');
   const [displayMonth, setDisplayMonth] = useState(month);
   const [displayYear,  setDisplayYear]  = useState(year);
@@ -405,6 +418,7 @@ export const MonthCalendarGraph: React.FC<MonthCalendarGraphProps> = ({
                 hasData={info.hasData}
                 fillProgress={info.fillProgress}
                 fillColor={info.fillColor}
+                trackColor={trackColor}
               />
             );
           })}
@@ -415,7 +429,7 @@ export const MonthCalendarGraph: React.FC<MonthCalendarGraphProps> = ({
         <LegendDot color={COLOR_HIGH}  label="≥60%"   />
         <LegendDot color={COLOR_MID}   label="30-60%" />
         <LegendDot color={COLOR_LOW}   label="<30%"   />
-        <LegendDot color={TRACK_COLOR} label="None"   isBorderOnly={false} />
+        <LegendDot color={trackColor}  label="None"   isBorderOnly={false} />
       </View>
 
     </View>
@@ -432,115 +446,123 @@ interface LegendDotProps {
   isBorderOnly?: boolean;
 }
 
-const LegendDot = ({ color, label, isBorderOnly = true }: LegendDotProps) => (
-  <View style={legend.item}>
-    <View
-      style={[
-        legend.dot,
-        isBorderOnly
-          ? { borderWidth: 2, borderColor: color, backgroundColor: color + '1A' }
-          : { backgroundColor: color },
-      ]}
-    />
-    <Text style={legend.label}>{label}</Text>
-  </View>
-);
+const LegendDot = ({ color, label, isBorderOnly = true }: LegendDotProps) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeLegendStyles(theme), [theme]);
+  return (
+    <View style={styles.item}>
+      <View
+        style={[
+          styles.dot,
+          isBorderOnly
+            ? { borderWidth: 2, borderColor: color, backgroundColor: color + '1A' }
+            : { backgroundColor: color },
+        ]}
+      />
+      <Text style={styles.label}>{label}</Text>
+    </View>
+  );
+};
 
-const legend = StyleSheet.create({
-  item:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dot:   { width: 12, height: 12, borderRadius: 4 },
-  label: { fontSize: 11, color: '#aaa', fontWeight: '500' },
-});
+function makeLegendStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    item:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    dot:   { width: 12, height: 12, borderRadius: 4 },
+    label: { fontSize: 11, color: theme.textTertiary, fontWeight: '500' },
+  });
+}
 
 // =============================================================================
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          16,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
-  headerRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    marginBottom:   12,
-  },
-  monthNav: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           4,
-  },
-  navArrow: {
-    padding: 2,
-  },
-  navArrowDisabled: {
-    opacity: 0.25,
-  },
-  navArrowText: {
-    fontSize:   22,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 26,
-  },
-  navArrowTextDisabled: {
-    color: '#bbb',
-  },
-  monthTitle: {
-    fontSize:   15,
-    fontWeight: '700',
-    color:      '#333',
-    minWidth:   130,       // widest label is "September 2026" — arrows stay fixed
-    textAlign:  'center',
-  },
-  toggle: {
-    flexDirection:   'row',
-    backgroundColor: '#f2f2f2',
-    borderRadius:    8,
-    padding:         2,
-    gap:             2,
-  },
-  toggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      7,
-  },
-  toggleLabel: {
-    fontSize:   12,
-    fontWeight: '600',
-    color:      '#999',
-  },
-  toggleLabelActive: {
-    color: '#fff',
-  },
-  dowRow: {
-    flexDirection:     'row',
-    marginBottom:      4,
-    paddingHorizontal: 2,
-  },
-  dowLabel: {
-    flex:       1,
-    textAlign:  'center',
-    fontSize:   11,
-    fontWeight: '700',
-    color:      '#ccc',
-  },
-  weekRow: {
-    flexDirection: 'row',
-  },
-  legend: {
-    flexDirection:  'row',
-    justifyContent: 'center',
-    gap:            16,
-    marginTop:      12,
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          16,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
+    headerRow: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      justifyContent: 'space-between',
+      marginBottom:   12,
+    },
+    monthNav: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           4,
+    },
+    navArrow: {
+      padding: 2,
+    },
+    navArrowDisabled: {
+      opacity: 0.25,
+    },
+    navArrowText: {
+      fontSize:   22,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 26,
+    },
+    navArrowTextDisabled: {
+      color: theme.textDisabled,
+    },
+    monthTitle: {
+      fontSize:   15,
+      fontWeight: '700',
+      color:      theme.textPrimary,
+      minWidth:   130,       // widest label is "September 2026" — arrows stay fixed
+      textAlign:  'center',
+    },
+    toggle: {
+      flexDirection:   'row',
+      backgroundColor: theme.bgInput,
+      borderRadius:    8,
+      padding:         2,
+      gap:             2,
+    },
+    toggleBtn: {
+      paddingHorizontal: 10,
+      paddingVertical:   5,
+      borderRadius:      7,
+    },
+    toggleLabel: {
+      fontSize:   12,
+      fontWeight: '600',
+      color:      theme.textTertiary,
+    },
+    toggleLabelActive: {
+      color: '#fff',
+    },
+    dowRow: {
+      flexDirection:     'row',
+      marginBottom:      4,
+      paddingHorizontal: 2,
+    },
+    dowLabel: {
+      flex:       1,
+      textAlign:  'center',
+      fontSize:   11,
+      fontWeight: '700',
+      color:      theme.textDisabled,
+    },
+    weekRow: {
+      flexDirection: 'row',
+    },
+    legend: {
+      flexDirection:  'row',
+      justifyContent: 'center',
+      gap:            16,
+      marginTop:      12,
+    },
+  });
+}

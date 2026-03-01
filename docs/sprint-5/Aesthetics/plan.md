@@ -1,6 +1,6 @@
 # Sprint 5 — Aesthetics Plan
 
-> **Status: PLANNED** — No code written yet.
+> **Status: DARK MODE COMPLETE** — All screens and shared components themed. Pillar 2 (Category Colour Strips) and Pillar 3 (Permanent/One-off distinction) are next.
 
 ---
 
@@ -8,30 +8,36 @@
 
 Four pillars:
 
-| # | Feature | Summary |
-|---|---------|---------|
-| 1 | **Dark Mode** | Full system-aware light/dark theme via a central theme context |
-| 2 | **Category Color Strips** | Left accent strip on every task card and template row, coloured by the task's category |
-| 3 | **Permanent vs One-Off Distinction** | Visual difference between recurring (permanent) tasks and one-off tasks in the task lists |
-| 4 | **General Polish** | Completed task dimming, header consistency, empty state improvements |
+| # | Feature | Summary | Status |
+|---|---------|---------|--------|
+| 1 | **Dark Mode** | Manual toggle in BrowseScreen, persisted via app_settings, full token system | ✅ Complete |
+| 2 | **Category Color Strips** | Left accent strip on every task card and template row, coloured by the task's category | ⏳ Planned |
+| 3 | **Permanent vs One-Off Distinction** | Visual difference between recurring (permanent) tasks and one-off tasks in the task lists | ⏳ Planned |
+| 4 | **General Polish** | Completed task dimming, header consistency, empty state improvements | ⏳ Planned |
 
 ---
 
 ## 1 — Dark Mode
 
+### Design change from original plan
+The original plan called for system-following (`useColorScheme()` only).
+**Changed to manual toggle**: a Dark Mode row in BrowseScreen lets the user
+flip the theme themselves. Preference is persisted in `app_settings` under
+key `dark_mode` (`'1'` = dark, `'0'` = light). On first launch with no stored
+preference, the system colour scheme is used as the default.
+
 ### Goal
-The app adapts automatically to the device's light/dark system setting.
 Every hardcoded colour (`#fff`, `#f5f5f5`, `#000`, etc.) is replaced by a
 theme token so a single context switch re-skins the entire app.
 
 ### Architecture
 
-**New directory: `app/theme/`**
+**New directory: `app/theme/`** ✅ Created
 
 ```
 app/theme/
-  tokens.ts          ← Light + dark colour palettes (plain objects, no React)
-  ThemeContext.tsx   ← React context + ThemeProvider + useTheme() hook
+  tokens.ts          ✅ Light + dark colour palettes (plain objects, no React)
+  ThemeContext.tsx   ✅ React context + ThemeProvider + useTheme() hook
 ```
 
 #### `app/theme/tokens.ts`
@@ -125,27 +131,50 @@ export const darkTheme: typeof lightTheme = {
 export type AppTheme = typeof lightTheme;
 ```
 
-#### `app/theme/ThemeContext.tsx`
+#### `app/theme/ThemeContext.tsx` ✅
+
+**Actual implementation** (differs from original plan — manual toggle, not system-only):
 
 ```typescript
-// Reads device colour scheme with useColorScheme().
-// Wraps the whole app in ThemeProvider.
-// useTheme() returns the active AppTheme object.
+// Persists user preference in app_settings ('dark_mode' key).
+// Falls back to useColorScheme() on first launch.
+// Exposes { theme, isDark, toggleTheme } via context.
 
-const ThemeContext = React.createContext<AppTheme>(lightTheme);
-
-export function ThemeProvider({ children }) {
-  const scheme = useColorScheme();   // 'light' | 'dark' | null
-  const theme  = scheme === 'dark' ? darkTheme : lightTheme;
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+interface ThemeContextValue {
+  theme:       AppTheme;
+  isDark:      boolean;
+  toggleTheme: () => void;    // ← added vs original plan
 }
 
-export function useTheme(): AppTheme {
+export function ThemeProvider({ children }) {
+  const systemScheme = useColorScheme();
+  const [isDark, setIsDark] = useState(() => {
+    const stored = getAppSetting('dark_mode');
+    if (stored !== null) return stored === '1';
+    return systemScheme === 'dark';   // fallback to system on first launch
+  });
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      setAppSetting('dark_mode', next ? '1' : '0');
+      return next;
+    });
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme: isDark ? darkTheme : lightTheme, isDark, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext);
 }
 ```
 
-`ThemeProvider` wraps the root in `App.tsx` (or wherever the root component lives).
+`ThemeProvider` wraps the root in `App.tsx`. ✅
 
 #### Usage in components
 
@@ -357,44 +386,216 @@ No change needed there — the colour dot is already the category's hex colour.
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
-| `app/theme/tokens.ts` | Light + dark colour palettes |
-| `app/theme/ThemeContext.tsx` | React context, ThemeProvider, useTheme() |
+| File | Purpose | Status |
+|------|---------|--------|
+| `app/theme/tokens.ts` | Light + dark colour palettes | ✅ Done |
+| `app/theme/ThemeContext.tsx` | React context, ThemeProvider, useTheme() | ✅ Done |
 
-### Modified Files
+### Modified Files — Dark Mode (Pillar 1)
 
-| File | Changes |
-|------|---------|
-| `App.tsx` (or root) | Wrap with `<ThemeProvider>` |
-| `app/core/types/task.ts` | Add `categoryColor?: string` |
-| `app/core/services/storage/taskStorage.ts` | JOIN categories, map `categoryColor` |
-| `app/features/permanentTask/utils/permanentTaskActions.ts` | JOIN categories on template load |
-| `app/components/tasks/TaskItem.tsx` | Category strip, perm/one-off checkbox colour, overdue highlight, completed dimming |
-| `app/screens/tasks/AllTasksScreen.tsx` | Use theme tokens for bg + header |
-| `app/screens/today/TodayScreen.tsx` | Use theme tokens for bg + header |
-| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Category strip on template rows, theme tokens, remove debug bg on header buttons |
-| `app/screens/browse/HistoryManagementScreen.tsx` | Theme tokens |
-| `app/screens/tasks/CreateTaskScreen.tsx` | Theme tokens |
-| `app/screens/tasks/CreatePermanentTaskScreen.tsx` | Theme tokens |
-| `app/screens/tasks/EditPermanentTaskScreen.tsx` | Theme tokens |
-| `app/screens/stats/StatsScreen.tsx` | Theme tokens |
-| `app/screens/stats/detail/*.tsx` | Theme tokens |
-| `app/navigation/MainNavigator.tsx` | Theme tokens |
+| File | Changes | Status |
+|------|---------|--------|
+| `App.tsx` | Wrap with `<ThemeProvider>` | ✅ Done |
+| `app/screens/browse/BrowseScreen.tsx` | Theme tokens + Dark Mode toggle row (Switch) | ✅ Done |
+| `app/components/tasks/TaskItem.tsx` | Theme tokens — bgCard, text, checkbox (kind-aware), delete, completed opacity | ✅ Done |
+| `app/components/navigation/TabBar.tsx` | Theme tokens — bg, border, active/inactive label colours | ✅ Done |
+| `app/navigation/MainNavigator.tsx` | Theme token for container bg | ✅ Done |
+| `app/screens/tasks/AllTasksScreen.tsx` | Theme tokens — bgScreen (header brand colour kept) | ✅ Done |
+| `app/screens/today/TodayScreen.tsx` | Theme tokens — bgScreen (header brand colour kept) | ✅ Done |
+| `app/screens/stats/StatsScreen.tsx` | Theme tokens — bgScreen, CollapsibleSection card bg + text | ✅ Done |
+| `app/screens/browse/HistoryManagementScreen.tsx` | Theme tokens — all surfaces, filter bar, rows | ✅ Done |
+| `app/screens/tasks/CreateTaskScreen.tsx` | Theme tokens — all surfaces, inputs, buttons | ✅ Done |
+| `app/screens/tasks/CreatePermanentTaskScreen.tsx` | Theme tokens — all surfaces, inputs, switches | ✅ Done |
+| `app/screens/tasks/EditPermanentTaskScreen.tsx` | Theme tokens — mirrors CreatePermanentTask | ✅ Done |
+| `app/screens/tasks/UsePermanentTaskScreen.tsx` | Theme tokens, debug bg removed from header buttons | ✅ Done |
+| `app/screens/stats/detail/OverallDetailScreen.tsx` | bgScreen container | ✅ Done |
+| `app/screens/stats/detail/PermanentDetailScreen.tsx` | bgScreen container | ✅ Done |
+| `app/screens/stats/detail/CategoryDetailScreen.tsx` | bgScreen container | ✅ Done |
+
+### Shared components — all themed ✅
+
+| File | Status |
+|------|--------|
+| `app/components/tasks/TaskList.tsx` | ✅ No hardcoded colours (layout only) |
+| `app/components/tasks/EditTaskModal.tsx` | ✅ Done |
+| `app/components/categories/CategorySelector.tsx` | ✅ Done |
+| `app/components/stats/TodayCard.tsx` | ✅ Done |
+| `app/components/stats/StatPreviewCard.tsx` | ✅ Done |
+| `app/components/stats/WeeklyMiniChart.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/CompletionSummaryCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/StreakCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/TimeRangePicker.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/TaskTypeBreakdownCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/WeekBarGraph.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/DayOfWeekPatternCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/WeekNavigator.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/TimeRangeCountsCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/MonthCalendarGraph.tsx` | ✅ Done (themed) |
+| `app/components/stats/detail/shared/YearOverviewGraph.tsx` | ✅ Done (themed) |
+| `app/components/stats/detail/overall/CategoryBreakdownCard.tsx` | ✅ Done |
+| `app/components/stats/detail/overall/CategoryWeekBarGraph.tsx` | ✅ Done |
+| `app/components/stats/detail/overall/CategoryYearOverviewGraph.tsx` | ✅ Done |
+| `app/components/stats/detail/category/PermanentTaskListCard.tsx` | ✅ Done |
+| `app/components/stats/detail/shared/DetailHeader.tsx` | ✅ No change needed (brand colour bg + white text) |
+
+### Modified Files — Category Colour Strip (Pillar 2, not started)
+
+| File | Changes | Status |
+|------|---------|--------|
+| `app/core/types/task.ts` | Add `categoryColor?: string` | ⏳ Planned |
+| `app/core/services/storage/taskStorage.ts` | JOIN categories, map `categoryColor` | ⏳ Planned |
+| `app/features/permanentTask/utils/permanentTaskActions.ts` | JOIN categories on template load | ⏳ Planned |
+| `app/components/tasks/TaskItem.tsx` | 4px left colour strip | ⏳ Planned |
+| `app/screens/tasks/UsePermanentTaskScreen.tsx` | 4px left colour strip on template rows | ⏳ Planned |
 
 ---
 
 ## Implementation Order
 
-1. **`app/theme/tokens.ts` + `ThemeContext.tsx`** — foundation, no UI change yet
-2. **`App.tsx`** — wrap with ThemeProvider
-3. **`task.ts`** — add `categoryColor` field
-4. **`taskStorage.ts`** — JOIN + map `categoryColor`
-5. **`permanentTaskActions.ts`** — JOIN + map `categoryColor` on templates
-6. **`TaskItem.tsx`** — strip + checkbox colours + overdue + completed dimming (biggest single change)
-7. **`UsePermanentTaskScreen.tsx`** — template strip + remove debug bg
-8. **All other screens** — swap hardcoded colours to theme tokens (mechanical, low risk)
-9. **Test in simulator** — toggle system dark mode, verify all screens
+### Dark mode — completed steps ✅
+1. `app/theme/tokens.ts` — palettes written
+2. `app/theme/ThemeContext.tsx` — context with manual toggle + persistence
+3. `App.tsx` — wrapped with `<ThemeProvider>`
+4. `BrowseScreen.tsx` — Dark Mode toggle row (Switch) + all theme tokens
+5. `TaskItem.tsx` — makeStyles, kind-aware checkbox colour, completed opacity
+6. `TabBar.tsx` — makeStyles, bg/border/label tokens
+7. `MainNavigator.tsx` — container bg token
+8. `AllTasksScreen.tsx`, `TodayScreen.tsx` — bgScreen token (brand headers kept)
+9. `StatsScreen.tsx` — bgScreen + CollapsibleSection uses useTheme internally
+10. `HistoryManagementScreen.tsx` — all surfaces themed
+11. `CreateTaskScreen.tsx`, `CreatePermanentTaskScreen.tsx`, `EditPermanentTaskScreen.tsx` — full makeStyles
+12. `UsePermanentTaskScreen.tsx` — full makeStyles, debug bg removed
+13. `OverallDetailScreen.tsx`, `PermanentDetailScreen.tsx`, `CategoryDetailScreen.tsx` — bgScreen container
+14. `EditTaskModal.tsx`, `CategorySelector.tsx`, `TodayCard.tsx`, `StatPreviewCard.tsx`, `WeeklyMiniChart.tsx` — shared task + stats components
+15. All `detail/shared/` components — `CompletionSummaryCard`, `StreakCard`, `TimeRangePicker`, `TaskTypeBreakdownCard`, `WeekBarGraph`, `DayOfWeekPatternCard`, `WeekNavigator`, `TimeRangeCountsCard`, `MonthCalendarGraph`, `YearOverviewGraph`
+16. All `detail/overall/` components — `CategoryBreakdownCard`, `CategoryWeekBarGraph`, `CategoryYearOverviewGraph`
+17. `detail/category/PermanentTaskListCard.tsx`
+
+### Dark mode — remaining ⏳
+18. Manual test: toggle Dark Mode in Browse, verify every screen re-skins correctly
+
+### Category colour strips (Pillar 2) — after dark mode is complete
+- Add `categoryColor` to Task type + storage JOIN
+- Add 4px strip to TaskItem and template rows
+
+---
+
+## Quick Guide — Adding Dark Mode to a Component
+
+Follow these steps every time a new screen or component is built, or when
+theming an existing unhemed one.
+
+### Step 1 — Add imports
+
+```tsx
+import { useTheme } from '../../theme/ThemeContext';   // adjust path depth
+import type { AppTheme } from '../../theme/tokens';    // for makeStyles type
+```
+
+Import `useMemo` from React if the component doesn't already use it:
+```tsx
+import React, { useMemo, ... } from 'react';
+```
+
+### Step 2 — Call useTheme() inside the component
+
+```tsx
+export const MyComponent: React.FC = () => {
+  const { theme } = useTheme();          // read-only palette access
+  // If you also need the toggle (e.g. a settings row):
+  // const { theme, isDark, toggleTheme } = useTheme();
+  ...
+};
+```
+
+### Step 3 — Convert StyleSheet to makeStyles
+
+Move the `StyleSheet.create({...})` call outside the component into a
+`makeStyles` function, and call it inside the component via `useMemo`:
+
+```tsx
+// OUTSIDE the component — receives theme, returns StyleSheet
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { backgroundColor: theme.bgScreen },
+    card:      { backgroundColor: theme.bgCard },
+    title:     { color: theme.textPrimary },
+    // ...
+  });
+}
+
+// INSIDE the component
+const styles = useMemo(() => makeStyles(theme), [theme]);
+```
+
+`useMemo` ensures the StyleSheet is only recreated when the theme changes
+(dark/light toggle), not on every render.
+
+### Step 4 — Replace hardcoded colours with tokens
+
+| Hardcoded | Token | When to use |
+|-----------|-------|-------------|
+| `#f5f5f5` | `theme.bgScreen` | Page / scroll background |
+| `#ffffff` | `theme.bgCard` | White card, list row, modal surface |
+| `#f5f5f5` (modal bg) | `theme.bgModal` | Bottom sheet / modal background |
+| `#f0f0f0` | `theme.bgInput` | Text input, inactive pill button |
+| `#ffffff` (form section) | `theme.bgSection` | Form section card |
+| `#000000` | `theme.textPrimary` | Main body text |
+| `#666666` | `theme.textSecondary` | Labels, captions |
+| `#888888` | `theme.textTertiary` | Helper text, placeholders |
+| `#bbbbbb` | `theme.textDisabled` | placeholderTextColor |
+| `#007AFF` | `theme.accent` | Buttons, active states, links |
+| `#FF3B30` | `theme.danger` | Delete buttons |
+| `#dddddd` | `theme.border` | Input borders, dividers |
+| `#f0f0f0` | `theme.separator` | Section separators |
+| `#cccccc` | `theme.hairline` | Chevrons, hairline borders |
+
+**Brand header colours stay hardcoded** — `#007AFF`, `#34C759`, `#FF9500`,
+`#5856D6` are identity colours that don't change in dark mode.
+
+### Step 5 — Inline dynamic colours (when StyleSheet isn't enough)
+
+For colours that depend on runtime data (e.g. category colour, task kind),
+use inline styles:
+
+```tsx
+// Checkbox colour varies by task kind
+const checkboxColor = task.kind === 'permanent'
+  ? theme.checkboxBorderPermanent
+  : theme.checkboxBorderOneOff;
+
+<View style={{ borderColor: checkboxColor, ... }} />
+```
+
+### Complete example (minimal screen)
+
+```tsx
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
+
+export const ExampleScreen: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.card}>
+        <Text style={styles.title}>Hello</Text>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bgScreen },
+    card:      { backgroundColor: theme.bgCard, borderRadius: 12, padding: 16, margin: 16 },
+    title:     { fontSize: 18, color: theme.textPrimary },
+  });
+}
+```
 
 ---
 
@@ -406,4 +607,4 @@ No change needed there — the colour dot is already the category's hex colour.
 | Recurring badge next to title — include? | Start without; add later if it looks cluttered to distinguish only by checkbox colour |
 | Should permanent task templates show a category strip? | Yes — templates in UsePermanentTaskScreen are the primary place users associate recurring tasks with categories |
 | Dark mode: keep brand header colours (blue/green/orange/purple)? | Yes — they are brand-identity colours, not semantic surfaces |
-| `useColorScheme()` — follow system setting only, or allow manual override? | Follow system only for now; user toggle is a future feature |
+| `useColorScheme()` — follow system setting only, or allow manual override? | ~~Follow system only for now~~ **Changed**: manual toggle in BrowseScreen, persisted to `app_settings`. System colour scheme is still the default on first launch. |

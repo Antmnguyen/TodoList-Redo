@@ -34,8 +34,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -86,12 +88,13 @@ interface SimpleRowProps {
   count:       number;
   color:       string;
   showDivider: boolean;
+  rowStyles:   ReturnType<typeof makeRowStyles>;
 }
 
-const SimpleRow: React.FC<SimpleRowProps> = ({ label, count, color, showDivider }) => (
-  <View style={[row.container, showDivider && row.withDivider]}>
-    <Text style={row.label}>{label}</Text>
-    <Text style={[row.simpleCount, { color }]}>{count}</Text>
+const SimpleRow: React.FC<SimpleRowProps> = ({ label, count, color, showDivider, rowStyles }) => (
+  <View style={[rowStyles.container, showDivider && rowStyles.withDivider]}>
+    <Text style={rowStyles.label}>{label}</Text>
+    <Text style={[rowStyles.simpleCount, { color }]}>{count}</Text>
   </View>
 );
 
@@ -104,71 +107,35 @@ interface BreakdownRowProps {
   total:       number;
   color:       string;
   showDivider: boolean;
+  rowStyles:   ReturnType<typeof makeRowStyles>;
 }
 
 const BreakdownRow: React.FC<BreakdownRowProps> = ({
-  label, perm, oneOff, total, color, showDivider,
+  label, perm, oneOff, total, color, showDivider, rowStyles,
 }) => (
-  <View style={[row.container, showDivider && row.withDivider]}>
-    <Text style={row.label}>{label}</Text>
-    <Text style={[row.bdCount, { color: COLOR_PERM }]}>{perm}</Text>
-    <Text style={[row.bdCount, { color: COLOR_ONEOFF }]}>{oneOff}</Text>
-    <Text style={[row.bdCount, { color }]}>{total}</Text>
+  <View style={[rowStyles.container, showDivider && rowStyles.withDivider]}>
+    <Text style={rowStyles.label}>{label}</Text>
+    <Text style={[rowStyles.bdCount, { color: COLOR_PERM }]}>{perm}</Text>
+    <Text style={[rowStyles.bdCount, { color: COLOR_ONEOFF }]}>{oneOff}</Text>
+    <Text style={[rowStyles.bdCount, { color }]}>{total}</Text>
   </View>
 );
 
 // ── Column header row (breakdown mode only) ───────────────────────────────────
 
 interface ColHeaderProps {
-  color: string;
+  color:     string;
+  rowStyles: ReturnType<typeof makeRowStyles>;
 }
 
-const ColHeader: React.FC<ColHeaderProps> = ({ color }) => (
-  <View style={row.container}>
+const ColHeader: React.FC<ColHeaderProps> = ({ color, rowStyles }) => (
+  <View style={rowStyles.container}>
     <View style={{ flex: 1 }} />
-    <Text style={[row.colHeader, { color: COLOR_PERM }]}>Perm</Text>
-    <Text style={[row.colHeader, { color: COLOR_ONEOFF }]}>One-off</Text>
-    <Text style={[row.colHeader, { color }]}>Total</Text>
+    <Text style={[rowStyles.colHeader, { color: COLOR_PERM }]}>Perm</Text>
+    <Text style={[rowStyles.colHeader, { color: COLOR_ONEOFF }]}>One-off</Text>
+    <Text style={[rowStyles.colHeader, { color }]}>Total</Text>
   </View>
 );
-
-const row = StyleSheet.create({
-  container: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    paddingHorizontal: 16,
-    paddingVertical:   12,
-  },
-  withDivider: {
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  label: {
-    flex:       1,
-    fontSize:   14,
-    color:      '#555',
-    fontWeight: '500',
-  },
-  simpleCount: {
-    fontSize:   22,
-    fontWeight: '800',
-    lineHeight: 26,
-  },
-  bdCount: {
-    width:      52,
-    fontSize:   17,
-    fontWeight: '700',
-    textAlign:  'right',
-  },
-  colHeader: {
-    width:         52,
-    fontSize:      10,
-    fontWeight:    '700',
-    textAlign:     'right',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-});
 
 // =============================================================================
 // COMPONENT
@@ -182,6 +149,10 @@ export const TimeRangeCountsCard: React.FC<TimeRangeCountsCardProps> = ({
   color,
   breakdown,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const rowStyles = useMemo(() => makeRowStyles(theme), [theme]);
+
   const totals = [weekCount, monthCount, yearCount, allTimeCount];
   const labels = ['This Week', 'This Month', 'This Year', 'All Time'];
   const bds    = breakdown
@@ -195,7 +166,7 @@ export const TimeRangeCountsCard: React.FC<TimeRangeCountsCardProps> = ({
       <Text style={styles.sectionLabel}>TIMES COMPLETED</Text>
 
       {/* Column headers — only in breakdown mode */}
-      {bds && <ColHeader color={color} />}
+      {bds && <ColHeader color={color} rowStyles={rowStyles} />}
 
       {/* Hairline separating header area from rows */}
       <View style={styles.headerDivider} />
@@ -211,6 +182,7 @@ export const TimeRangeCountsCard: React.FC<TimeRangeCountsCardProps> = ({
             total={totals[i]}
             color={color}
             showDivider={i > 0}
+            rowStyles={rowStyles}
           />
         ) : (
           <SimpleRow
@@ -219,6 +191,7 @@ export const TimeRangeCountsCard: React.FC<TimeRangeCountsCardProps> = ({
             count={totals[i]}
             color={color}
             showDivider={i > 0}
+            rowStyles={rowStyles}
           />
         )
       )}
@@ -231,30 +204,72 @@ export const TimeRangeCountsCard: React.FC<TimeRangeCountsCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    paddingTop:       14,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-    overflow:         'hidden',
-  },
-  sectionLabel: {
-    fontSize:          11,
-    fontWeight:        '800',
-    color:             '#ccc',
-    letterSpacing:     1.1,
-    paddingHorizontal: 16,
-    marginBottom:      4,
-  },
-  headerDivider: {
-    height:          1,
-    backgroundColor: '#f0f0f0',
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      paddingTop:       14,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+      overflow:         'hidden',
+    },
+    sectionLabel: {
+      fontSize:          11,
+      fontWeight:        '800',
+      color:             theme.textDisabled,
+      letterSpacing:     1.1,
+      paddingHorizontal: 16,
+      marginBottom:      4,
+    },
+    headerDivider: {
+      height:          1,
+      backgroundColor: theme.separator,
+    },
+  });
+}
+
+function makeRowStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flexDirection:    'row',
+      alignItems:       'center',
+      paddingHorizontal: 16,
+      paddingVertical:   12,
+    },
+    withDivider: {
+      borderTopWidth: 1,
+      borderTopColor: theme.separator,
+    },
+    label: {
+      flex:       1,
+      fontSize:   14,
+      color:      theme.textSecondary,
+      fontWeight: '500',
+    },
+    simpleCount: {
+      fontSize:   22,
+      fontWeight: '800',
+      lineHeight: 26,
+    },
+    bdCount: {
+      width:      52,
+      fontSize:   17,
+      fontWeight: '700',
+      textAlign:  'right',
+    },
+    colHeader: {
+      width:         52,
+      fontSize:      10,
+      fontWeight:    '700',
+      textAlign:     'right',
+      letterSpacing: 0.3,
+      textTransform: 'uppercase',
+    },
+  });
+}

@@ -29,10 +29,12 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CircularProgress } from './CircularProgress';
 import { safePct } from '../../core/utils/statUtils';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES  (exported — StatsScreen uses these)
@@ -87,10 +89,11 @@ const LinearBar: React.FC<LinearBarProps> = ({
   height = 8,
   borderRadius,
 }) => {
+  const { theme } = useTheme();
   const pct  = total > 0 ? Math.min(done / total, 1) : 0;
   const r    = borderRadius ?? height / 2;
   return (
-    <View style={{ height, backgroundColor: '#f0f0f0', borderRadius: r, overflow: 'hidden' }}>
+    <View style={{ height, backgroundColor: theme.separator, borderRadius: r, overflow: 'hidden' }}>
       <View
         style={{
           width:           `${pct * 100}%`,
@@ -116,7 +119,10 @@ interface TypeMiniCardProps {
 }
 
 const TypeMiniCard: React.FC<TypeMiniCardProps> = ({ emoji, label, done, total, color }) => {
+  const { theme } = useTheme();
+  const miniCard = useMemo(() => makeMiniCardStyles(theme), [theme]);
   const pct = safePct(done, total);
+
   return (
     <View style={[miniCard.box, { borderColor: color + '33' }]}>
 
@@ -142,33 +148,15 @@ const TypeMiniCard: React.FC<TypeMiniCardProps> = ({ emoji, label, done, total, 
   );
 };
 
-const miniCard = StyleSheet.create({
-  box: {
-    flex:            1,
-    backgroundColor: '#fafafa',
-    borderRadius:    14,
-    borderWidth:     1,
-    padding:         14,
-  },
-  topRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   6,
-  },
-  emoji:    { fontSize: 20 },
-  pct:      { fontSize: 13, fontWeight: '700' },
-  fraction: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', lineHeight: 30 },
-  fractionDenom: { fontSize: 16, fontWeight: '500', color: '#bbb' },
-  label:    { fontSize: 12, color: '#999', fontWeight: '500', marginTop: 1 },
-});
-
 // =============================================================================
 // CATEGORY ROW
 // =============================================================================
 
 const CategoryRow: React.FC<{ cat: CategoryStat; isFirst: boolean }> = ({ cat, isFirst }) => {
+  const { theme } = useTheme();
+  const catRow = useMemo(() => makeCatRowStyles(theme), [theme]);
   const pct = safePct(cat.done, cat.total);
+
   return (
     <View style={[catRow.row, !isFirst && { marginTop: 13 }]}>
       {/* Colored dot */}
@@ -191,39 +179,6 @@ const CategoryRow: React.FC<{ cat: CategoryStat; isFirst: boolean }> = ({ cat, i
   );
 };
 
-const catRow = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           8,
-  },
-  dot: {
-    width:        9,
-    height:       9,
-    borderRadius: 5,
-  },
-  name: {
-    width:      76,
-    fontSize:   14,
-    fontWeight: '600',
-    color:      '#1a1a1a',
-  },
-  barWrap: { flex: 1 },
-  count: {
-    width:      34,
-    fontSize:   13,
-    color:      '#999',
-    fontWeight: '500',
-    textAlign:  'right',
-  },
-  pct: {
-    width:      38,
-    fontSize:   13,
-    fontWeight: '700',
-    textAlign:  'right',
-  },
-});
-
 // =============================================================================
 // TODAY CARD  (main export)
 // =============================================================================
@@ -235,6 +190,9 @@ interface TodayCardProps {
 const ACCENT = '#FF9500';
 
 export const TodayCard: React.FC<TodayCardProps> = ({ data }) => {
+  const { theme, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const overallPct  = safePct(data.completedTasks, data.totalTasks);
   const remaining   = data.totalTasks - data.completedTasks;
   const today       = new Date();
@@ -276,7 +234,7 @@ export const TodayCard: React.FC<TodayCardProps> = ({ data }) => {
 
           {/* Streak pill */}
           {data.streak > 0 && (
-            <View style={styles.streakPill}>
+            <View style={[styles.streakPill, { backgroundColor: isDark ? 'rgba(255,149,0,0.18)' : '#FFF3E0' }]}>
               <Text style={styles.streakText}>🔥 {data.streak}-day streak</Text>
             </View>
           )}
@@ -333,120 +291,179 @@ export const TodayCard: React.FC<TodayCardProps> = ({ data }) => {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#fff',
-    borderRadius:    20,
-    marginHorizontal: 16,
-    marginBottom:    16,
-    padding:         20,
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 4 },
-    shadowOpacity:   0.1,
-    shadowRadius:    12,
-    elevation:       5,
-  },
+function makeMiniCardStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    box: {
+      flex:            1,
+      backgroundColor: theme.bgSection,
+      borderRadius:    14,
+      borderWidth:     1,
+      padding:         14,
+    },
+    topRow: {
+      flexDirection:  'row',
+      justifyContent: 'space-between',
+      alignItems:     'center',
+      marginBottom:   6,
+    },
+    emoji:    { fontSize: 20 },
+    pct:      { fontSize: 13, fontWeight: '700' },
+    fraction: { fontSize: 26, fontWeight: '800', color: theme.textPrimary, lineHeight: 30 },
+    fractionDenom: { fontSize: 16, fontWeight: '500', color: theme.textDisabled },
+    label:    { fontSize: 12, color: theme.textTertiary, fontWeight: '500', marginTop: 1 },
+  });
+}
 
-  // Header
-  headerRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   20,
-  },
-  headerLabel: {
-    fontSize:    13,
-    fontWeight:  '800',
-    color:       ACCENT,
-    letterSpacing: 1.4,
-  },
-  headerDate: {
-    fontSize:   13,
-    color:      '#bbb',
-    fontWeight: '500',
-  },
+function makeCatRowStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           8,
+    },
+    dot: {
+      width:        9,
+      height:       9,
+      borderRadius: 5,
+    },
+    name: {
+      width:      76,
+      fontSize:   14,
+      fontWeight: '600',
+      color:      theme.textPrimary,
+    },
+    barWrap: { flex: 1 },
+    count: {
+      width:      34,
+      fontSize:   13,
+      color:      theme.textTertiary,
+      fontWeight: '500',
+      textAlign:  'right',
+    },
+    pct: {
+      width:      38,
+      fontSize:   13,
+      fontWeight: '700',
+      textAlign:  'right',
+    },
+  });
+}
 
-  // Hero
-  heroRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           20,
-    marginBottom:  18,
-  },
-  heroInfo: {
-    flex: 1,
-    gap:  3,
-  },
-  statLine: {
-    flexDirection: 'row',
-    alignItems:    'baseline',
-  },
-  bigNum: {
-    fontSize:   28,
-    fontWeight: '800',
-    lineHeight: 32,
-  },
-  bigNum2: {
-    fontSize:   28,
-    fontWeight: '800',
-    color:      '#1a1a1a',
-    lineHeight: 32,
-  },
-  statSuffix: {
-    fontSize:   15,
-    color:      '#888',
-    fontWeight: '500',
-  },
-  totalLabel: {
-    fontSize:   13,
-    color:      '#ccc',
-    marginTop:  2,
-  },
-  streakPill: {
-    marginTop:       10,
-    alignSelf:       'flex-start',
-    backgroundColor: '#FFF3E0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius:    20,
-  },
-  streakText: {
-    fontSize:   12,
-    color:      ACCENT,
-    fontWeight: '600',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: theme.bgCard,
+      borderRadius:    20,
+      marginHorizontal: 16,
+      marginBottom:    16,
+      padding:         20,
+      shadowColor:     '#000',
+      shadowOffset:    { width: 0, height: 4 },
+      shadowOpacity:   0.1,
+      shadowRadius:    12,
+      elevation:       5,
+    },
 
-  // Progress bar
-  barRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-  },
-  barPct: {
-    fontSize:   13,
-    fontWeight: '700',
-    width:      36,
-    textAlign:  'right',
-  },
+    // Header
+    headerRow: {
+      flexDirection:  'row',
+      justifyContent: 'space-between',
+      alignItems:     'center',
+      marginBottom:   20,
+    },
+    headerLabel: {
+      fontSize:    13,
+      fontWeight:  '800',
+      color:       ACCENT,
+      letterSpacing: 1.4,
+    },
+    headerDate: {
+      fontSize:   13,
+      color:      theme.textDisabled,
+      fontWeight: '500',
+    },
 
-  // Divider
-  divider: {
-    height:          1,
-    backgroundColor: '#f2f2f2',
-    marginVertical:  18,
-  },
+    // Hero
+    heroRow: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           20,
+      marginBottom:  18,
+    },
+    heroInfo: {
+      flex: 1,
+      gap:  3,
+    },
+    statLine: {
+      flexDirection: 'row',
+      alignItems:    'baseline',
+    },
+    bigNum: {
+      fontSize:   28,
+      fontWeight: '800',
+      lineHeight: 32,
+    },
+    bigNum2: {
+      fontSize:   28,
+      fontWeight: '800',
+      color:      theme.textPrimary,
+      lineHeight: 32,
+    },
+    statSuffix: {
+      fontSize:   15,
+      color:      theme.textTertiary,
+      fontWeight: '500',
+    },
+    totalLabel: {
+      fontSize:   13,
+      color:      theme.textDisabled,
+      marginTop:  2,
+    },
+    streakPill: {
+      marginTop:         10,
+      alignSelf:         'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical:   5,
+      borderRadius:      20,
+    },
+    streakText: {
+      fontSize:   12,
+      color:      ACCENT,
+      fontWeight: '600',
+    },
 
-  // Type breakdown
-  typeRow: {
-    flexDirection: 'row',
-  },
+    // Progress bar
+    barRow: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           10,
+    },
+    barPct: {
+      fontSize:   13,
+      fontWeight: '700',
+      width:      36,
+      textAlign:  'right',
+    },
 
-  // Category section
-  sectionLabel: {
-    fontSize:     11,
-    fontWeight:   '800',
-    color:        '#ccc',
-    letterSpacing: 1.1,
-    marginBottom: 14,
-  },
-});
+    // Divider
+    divider: {
+      height:          1,
+      backgroundColor: theme.separator,
+      marginVertical:  18,
+    },
+
+    // Type breakdown
+    typeRow: {
+      flexDirection: 'row',
+    },
+
+    // Category section
+    sectionLabel: {
+      fontSize:     11,
+      fontWeight:   '800',
+      color:        theme.textDisabled,
+      letterSpacing: 1.1,
+      marginBottom: 14,
+    },
+  });
+}

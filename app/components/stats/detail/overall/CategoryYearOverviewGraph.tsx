@@ -30,6 +30,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CategorySegment } from './CategoryWeekBarGraph';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -67,11 +69,6 @@ const BAR_WIDTH      = 14;
 const MONTH_INITIALS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
 // =============================================================================
-// HELPERS
-// =============================================================================
-
-
-// =============================================================================
 // SUB-COMPONENT — single month bar column
 // =============================================================================
 
@@ -87,11 +84,13 @@ interface MonthBarProps {
 const MonthBar: React.FC<MonthBarProps> = ({
   item, total, maxTotal, color, isFuture, segments,
 }) => {
+  const { theme } = useTheme();
+  const colStyles = useMemo(() => makeColStyles(theme), [theme]);
   const hasActivity = total > 0;
 
   return (
-    <View style={[col.container, isFuture && col.future]}>
-      <View style={[col.barArea, { height: BAR_MAX_HEIGHT }]}>
+    <View style={[colStyles.container, isFuture && colStyles.future]}>
+      <View style={[colStyles.barArea, { height: BAR_MAX_HEIGHT }]}>
         {hasActivity ? (
           <View style={{ width: BAR_WIDTH, overflow: 'hidden', borderRadius: 4 }}>
             {[...segments].reverse().map((seg, i) => {
@@ -105,26 +104,18 @@ const MonthBar: React.FC<MonthBarProps> = ({
               width:           BAR_WIDTH,
               height:          BAR_MIN_HEIGHT,
               borderRadius:    4,
-              backgroundColor: '#e8e8e8',
+              backgroundColor: theme.separator,
             }}
           />
         )}
       </View>
-      <Text style={col.monthLabel}>{MONTH_INITIALS[item.month]}</Text>
-      <Text style={[col.valueLabel, hasActivity && { color }]}>
+      <Text style={colStyles.monthLabel}>{MONTH_INITIALS[item.month]}</Text>
+      <Text style={[colStyles.valueLabel, hasActivity && { color }]}>
         {hasActivity ? String(total) : '–'}
       </Text>
     </View>
   );
 };
-
-const col = StyleSheet.create({
-  container:  { flex: 1, alignItems: 'center' },
-  future:     { opacity: 0.3 },
-  barArea:    { justifyContent: 'flex-end', alignItems: 'center' },
-  monthLabel: { fontSize: 11, color: '#bbb', fontWeight: '600', marginTop: 5 },
-  valueLabel: { fontSize: 9,  color: '#ccc', fontWeight: '500', marginTop: 1 },
-});
 
 // =============================================================================
 // COMPONENT
@@ -136,6 +127,9 @@ export const CategoryYearOverviewGraph: React.FC<CategoryYearOverviewGraphProps>
   initialYear,
   onYearChange,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const currentYear  = new Date().getFullYear();
   const [displayYear, setDisplayYear] = useState(initialYear ?? currentYear);
   const isCurrentYear = displayYear === currentYear;
@@ -238,84 +232,96 @@ export const CategoryYearOverviewGraph: React.FC<CategoryYearOverviewGraphProps>
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor:  '#fff',
-    borderRadius:     18,
-    marginHorizontal: 16,
-    marginBottom:     12,
-    padding:          20,
-    shadowColor:      '#000',
-    shadowOffset:     { width: 0, height: 2 },
-    shadowOpacity:    0.07,
-    shadowRadius:     8,
-    elevation:        3,
-  },
+function makeColStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container:  { flex: 1, alignItems: 'center' },
+    future:     { opacity: 0.3 },
+    barArea:    { justifyContent: 'flex-end', alignItems: 'center' },
+    monthLabel: { fontSize: 11, color: theme.textDisabled, fontWeight: '600', marginTop: 5 },
+    valueLabel: { fontSize: 9,  color: theme.textDisabled, fontWeight: '500', marginTop: 1 },
+  });
+}
 
-  headerRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    marginBottom:   6,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor:  theme.bgCard,
+      borderRadius:     18,
+      marginHorizontal: 16,
+      marginBottom:     12,
+      padding:          20,
+      shadowColor:      '#000',
+      shadowOffset:     { width: 0, height: 2 },
+      shadowOpacity:    0.07,
+      shadowRadius:     8,
+      elevation:        3,
+    },
 
-  yearNav: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
+    headerRow: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      justifyContent: 'space-between',
+      marginBottom:   6,
+    },
 
-  navArrow:            { padding: 2 },
-  navArrowDisabled:    { opacity: 0.25 },
-  navArrowText: {
-    fontSize:   22,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 26,
-  },
-  navArrowTextDisabled: { color: '#bbb' },
+    yearNav: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           6,
+    },
 
-  yearLabel: {
-    fontSize:   16,
-    fontWeight: '700',
-    color:      '#333',
-  },
+    navArrow:            { padding: 2 },
+    navArrowDisabled:    { opacity: 0.25 },
+    navArrowText: {
+      fontSize:   22,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 26,
+    },
+    navArrowTextDisabled: { color: theme.textDisabled },
 
-  sectionLabel: {
-    fontSize:      11,
-    fontWeight:    '800',
-    color:         '#ccc',
-    letterSpacing: 1.1,
-    marginBottom:  14,
-  },
+    yearLabel: {
+      fontSize:   16,
+      fontWeight: '700',
+      color:      theme.textPrimary,
+    },
 
-  barsRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-  },
+    sectionLabel: {
+      fontSize:      11,
+      fontWeight:    '800',
+      color:         theme.textDisabled,
+      letterSpacing: 1.1,
+      marginBottom:  14,
+    },
 
-  legend: {
-    flexDirection:  'row',
-    flexWrap:       'wrap',
-    gap:            10,
-    marginTop:      14,
-    paddingTop:     12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           5,
-  },
-  legendDot: {
-    width:        8,
-    height:       8,
-    borderRadius: 4,
-  },
-  legendLabel: {
-    fontSize:   12,
-    color:      '#666',
-    fontWeight: '500',
-  },
-});
+    barsRow: {
+      flexDirection: 'row',
+      alignItems:    'flex-end',
+    },
+
+    legend: {
+      flexDirection:  'row',
+      flexWrap:       'wrap',
+      gap:            10,
+      marginTop:      14,
+      paddingTop:     12,
+      borderTopWidth: 1,
+      borderTopColor: theme.separator,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           5,
+    },
+    legendDot: {
+      width:        8,
+      height:       8,
+      borderRadius: 4,
+    },
+    legendLabel: {
+      fontSize:   12,
+      color:      theme.textSecondary,
+      fontWeight: '500',
+    },
+  });
+}

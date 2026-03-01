@@ -45,6 +45,7 @@ import { FloatingCreateTaskButton } from '../components/tasks/FloatingCreateTask
 // Actions
 import { createTask } from '../core/domain/taskActions';
 import { Task } from '../core/types/task';
+import { useTheme } from '../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
@@ -89,6 +90,7 @@ export const MainNavigator: React.FC = () => {
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('tasks');
   const [overlayScreen, setOverlayScreen] = useState<OverlayScreen>('none');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -262,7 +264,7 @@ export const MainNavigator: React.FC = () => {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
       {/* Content Area */}
       <View style={styles.content}>
         {overlayScreen === 'none' ? renderTabContent() : renderOverlayScreen()}

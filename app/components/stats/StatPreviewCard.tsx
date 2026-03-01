@@ -18,7 +18,7 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,8 @@ import {
 } from 'react-native';
 import { CircularProgress } from './CircularProgress';
 import { WeeklyMiniChart, DayData } from './WeeklyMiniChart';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 // =============================================================================
 // TYPES  (exported — StatsScreen imports these)
@@ -63,6 +65,9 @@ export const StatPreviewCard: React.FC<StatPreviewCardProps> = ({
   onPress,
   style,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <TouchableOpacity
       style={[styles.card, style]}
@@ -116,61 +121,63 @@ export const StatPreviewCard: React.FC<StatPreviewCardProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 14,
-    // Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: theme.bgCard,
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 14,
+      // Shadow
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.07,
+      shadowRadius: 8,
+      elevation: 3,
+    },
 
-  // Top row
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  info: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 3,
-  },
-  count: {
-    fontSize: 13,
-    color: '#888',
-    fontWeight: '400',
-  },
+    // Top row
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    info: {
+      flex: 1,
+      marginLeft: 14,
+    },
+    name: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.textPrimary,
+      marginBottom: 3,
+    },
+    count: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      fontWeight: '400',
+    },
 
-  // Streak badge
-  streakBadge: {
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  streakFire: {
-    fontSize: 18,
-  },
-  streakNumber: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginTop: 1,
-  },
+    // Streak badge
+    streakBadge: {
+      alignItems: 'center',
+      marginLeft: 12,
+    },
+    streakFire: {
+      fontSize: 18,
+    },
+    streakNumber: {
+      fontSize: 16,
+      fontWeight: '800',
+      marginTop: 1,
+    },
 
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: '#f2f2f2',
-    marginBottom: 12,
-  },
-});
+    // Divider
+    divider: {
+      height: 1,
+      backgroundColor: theme.separator,
+      marginBottom: 12,
+    },
+  });
+}

@@ -38,8 +38,10 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../../../theme/ThemeContext';
+import type { AppTheme } from '../../../../theme/tokens';
 
 // =============================================================================
 // TYPES
@@ -94,6 +96,8 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   onNext,
   isCurrentWeek,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const label = formatWeekRange(weekStart);
 
   return (
@@ -129,46 +133,48 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    justifyContent:   'space-between',
-    marginHorizontal: 16,
-    marginBottom:     12,
-    paddingVertical:  10,
-    paddingHorizontal: 14,
-    backgroundColor:  '#fafafa',
-    borderRadius:     14,
-    borderWidth:      1,
-    borderColor:      '#f0f0f0',
-  },
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flexDirection:    'row',
+      alignItems:       'center',
+      justifyContent:   'space-between',
+      marginHorizontal: 16,
+      marginBottom:     12,
+      paddingVertical:  10,
+      paddingHorizontal: 14,
+      backgroundColor:  theme.bgInput,
+      borderRadius:     14,
+      borderWidth:      1,
+      borderColor:      theme.border,
+    },
 
-  arrow: {
-    padding: 4,
-  },
+    arrow: {
+      padding: 4,
+    },
 
-  // Visually dim the next arrow when browsing the current week
-  arrowDisabled: {
-    opacity: 0.25,
-  },
+    // Visually dim the next arrow when browsing the current week
+    arrowDisabled: {
+      opacity: 0.25,
+    },
 
-  arrowText: {
-    fontSize:   26,
-    color:      '#555',
-    fontWeight: '400',
-    lineHeight: 30,
-  },
+    arrowText: {
+      fontSize:   26,
+      color:      theme.textSecondary,
+      fontWeight: '400',
+      lineHeight: 30,
+    },
 
-  arrowTextDisabled: {
-    color: '#bbb',
-  },
+    arrowTextDisabled: {
+      color: theme.textDisabled,
+    },
 
-  label: {
-    flex:       1,
-    textAlign:  'center',
-    fontSize:   14,
-    fontWeight: '600',
-    color:      '#333',
-  },
-});
+    label: {
+      flex:       1,
+      textAlign:  'center',
+      fontSize:   14,
+      fontWeight: '600',
+      color:      theme.textPrimary,
+    },
+  });
+}

@@ -1,6 +1,6 @@
 # Task Archival System — Implementation Plan
 
-**Status:** ✅ Complete — Implemented 2026-02-27
+**Status:** ✅ Complete — Implemented 2026-02-28
 **Sprint:** 5 (§2.4)
 **Depends on:** Midnight job (`midnight-job.md`) — archival runs as job #3 inside `runMidnightJob()`
 
@@ -715,6 +715,17 @@ archival too. If the app crashes after step 2 but before step 3, archival retrie
 on the next cold start. `writeArchivedTasks` uses `INSERT OR IGNORE`, so rows
 already written in the partial run are harmlessly skipped.
 
+### Dev testing mode (currently active)
+
+`runMidnightJobDev()` in `taskActions.ts` runs all three jobs unconditionally
+(no session flag, no date gate) and is called on a **3-minute `setInterval`**
+from `useTasks.ts`. This lets the full archival pipeline be exercised without
+waiting until midnight.
+
+**To switch back to production**, see the instructions in `taskActions.ts` and
+`useTasks.ts` — both files have prominent `⚠️ DEV TESTING` banners with
+step-by-step revert instructions.
+
 ---
 
 ## Edge Cases
@@ -729,6 +740,7 @@ already written in the partial run are harmlessly skipped.
 | Category deleted after task completed | `LEFT JOIN` returns null — `category_name` stored as null, `categoryId` retained for potential recovery |
 | Two midnight jobs run back-to-back (edge case) | The date gate prevents this in normal use. If it somehow happens, idempotency handles it |
 | Very large archive (1000s of rows) | `getArchivedTasks` returns all matching rows — if this becomes slow, a `LIMIT`/pagination can be added to the screen without schema changes |
+| `ON DELETE CASCADE` on `template_instances` | SQLite foreign key enforcement is **OFF** by default and no `PRAGMA foreign_keys = ON` is set in this codebase. The cascade never fires automatically. Step 5's explicit `DELETE FROM template_instances WHERE instanceId IN (...)` is the real cleanup. The `ON DELETE CASCADE` declaration is inert but harmless. |
 
 ---
 

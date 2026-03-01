@@ -10,9 +10,11 @@
 //
 // =============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Task } from '../../core/types/task';
+import { useTheme } from '../../theme/ThemeContext';
+import type { AppTheme } from '../../theme/tokens';
 
 type TaskItemProps = {
   task: Task;
@@ -22,8 +24,16 @@ type TaskItemProps = {
 };
 
 export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, onEdit }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  // Checkbox colour varies by task kind — purple for permanent, blue for one-off
+  const checkboxColor = task.kind === 'permanent'
+    ? theme.checkboxBorderPermanent
+    : theme.checkboxBorderOneOff;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, task.completed && styles.containerCompleted]}>
       {/* Checkbox - tap to toggle completion */}
       <TouchableOpacity
         style={styles.checkbox}
@@ -31,7 +41,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, on
       >
         <View style={[
           styles.checkboxInner,
-          task.completed && styles.checkboxChecked
+          { borderColor: checkboxColor },
+          task.completed && { backgroundColor: checkboxColor },
         ]}>
           {task.completed && <Text style={styles.checkmark}>✓</Text>}
         </View>
@@ -45,7 +56,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, on
       >
         <Text style={[
           styles.title,
-          task.completed && styles.titleCompleted
+          task.completed && styles.titleCompleted,
         ]}>
           {task.title}
         </Text>
@@ -53,7 +64,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete, on
         {task.dueDate && (
           <Text style={[
             styles.dueDate,
-            task.completed && styles.dueDateCompleted
+            task.completed && styles.dueDateCompleted,
           ]}>
             {formatDueDate(task.dueDate)}
           </Text>
@@ -104,65 +115,66 @@ function formatDueDate(date: Date): string {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  checkbox: {
-    marginRight: 12,
-  },
-  checkboxInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#007AFF',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  body: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    color: '#000',
-  },
-  titleCompleted: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-  },
-  dueDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  dueDateCompleted: {
-    color: '#999',
-  },
-  deleteButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  deleteText: {
-    fontSize: 20,
-    color: '#FF3B30',
-  },
-});
+function makeStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      backgroundColor: theme.bgCard,
+      borderRadius: 8,
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    containerCompleted: {
+      opacity: 0.6,
+    },
+    checkbox: {
+      marginRight: 12,
+    },
+    checkboxInner: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkmark: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    body: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    titleCompleted: {
+      textDecorationLine: 'line-through',
+      color: theme.completedText,
+    },
+    dueDate: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    dueDateCompleted: {
+      color: theme.completedText,
+    },
+    deleteButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    deleteText: {
+      fontSize: 20,
+      color: theme.danger,
+    },
+  });
+}
