@@ -9,12 +9,12 @@ The app is available as a production-ready APK for Android devices.
 
 | Scan to Download | Installation |
 | :--- | :--- |
-| ![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/Antmnguyen/TodoList-Redo/releases/latest/download/productivity_tracker1.0.0.apk) | 1. Scan with your Android camera.<br>2. Download the `.apk` file.<br>3. Tap **Install** (Allow "Unknown Sources" if prompted). |
+| ![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/Antmnguyen/TodoList-Redo/releases/latest/download/productivity_tracker1.0.1.apk) | 1. Scan with your Android camera.<br>2. Download the `.apk` file.<br>3. Tap **Install** (Allow "Unknown Sources" if prompted). |
 
 ---
 ### Direct Download
 If you are viewing this on your mobile device, you can download the application directly using the link below:
-[**Download ProductivityTracker APK**](https://github.com/Antmnguyen/TodoList-Redo/releases/latest/download/productivity_tracker1.0.0.apk)
+[**Download ProductivityTracker APK**](https://github.com/Antmnguyen/TodoList-Redo/releases/latest/download/productivity_tracker1.0.1.apk)
 
 ## Functional Overview
 
@@ -61,6 +61,7 @@ The app uses a relational SQLite database to turn task history into visual metri
 
 ---
 *Snapshot generated 2026-03-01 · Sprint 5 Deployment*
+
 
 
 
