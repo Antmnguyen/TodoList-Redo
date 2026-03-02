@@ -16,7 +16,8 @@
 // =============================================================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
 import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
@@ -102,7 +103,7 @@ export const TodayScreen: React.FC = () => {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgScreen }]}>
+    <Screen edges={['top']} topColor={ACCENT} style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* Header */}
       <View style={styles.header}>
@@ -156,7 +157,7 @@ export const TodayScreen: React.FC = () => {
         onSave={handleSaveEdit}
         onClose={handleCloseEdit}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -170,7 +171,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding:          20,
-    paddingTop:       60,
     backgroundColor:  ACCENT,
   },
   title: {

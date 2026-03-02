@@ -1,5 +1,6 @@
 // app/core/hooks/useTasks.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Task } from '../types/task';
 import { getAllTasks } from '../services/storage/taskStorage';
 import {
@@ -11,6 +12,7 @@ import {
   // Production: runs once per calendar day (guarded by SQLite date gate +
   // in-session flag). Order: autoFail → autoSchedule → archive.
   runMidnightJob,
+  resetMidnightJobSession,
   // DEV TESTING: uncomment runMidnightJobDev and swap the useEffect below
   // to re-enable the 3-minute interval pipeline for local testing.
   // runMidnightJobDev,
@@ -19,12 +21,32 @@ import {
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const appState = useRef(AppState.currentState);
 
   // Run the midnight maintenance job (autoFail → autoSchedule → archive),
   // then load the task list so the UI starts with an up-to-date view.
   // The job is guarded to run at most once per calendar day.
   useEffect(() => {
     runMidnightJob().then(loadTasks);
+  }, []);
+
+  // Re-check the midnight gate whenever the app returns to the foreground.
+  // The JS engine stays alive while the app is backgrounded, so the mount
+  // useEffect above won't fire again — but the calendar date may have crossed
+  // midnight. Resetting the session flag forces runMidnightJob to re-evaluate
+  // the SQLite date gate; if the date changed it runs the jobs and reloads.
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextState: AppStateStatus) => {
+        if (appState.current !== 'active' && nextState === 'active') {
+          resetMidnightJobSession();
+          runMidnightJob().then(loadTasks);
+        }
+        appState.current = nextState;
+      },
+    );
+    return () => subscription.remove();
   }, []);
 
   // ── DEV TESTING MODE (3-minute interval) ─────────────────────────────────

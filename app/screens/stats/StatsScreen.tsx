@@ -23,7 +23,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Screen } from '../../components/layout/Screen';
 import { StatPreviewCard, StatPreviewData } from '../../components/stats/StatPreviewCard';
 import { TodayCard } from '../../components/stats/TodayCard';
 import { StatDetailParams } from '../../core/types/statDetailTypes';
@@ -306,7 +306,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top']} topColor="#FF9500" style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Stats</Text>
@@ -377,7 +377,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onStatCardPress }) => 
 
         <View style={styles.bottomPad} />
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -393,7 +393,6 @@ function makeStyles(theme: AppTheme) {
     },
     header: {
       padding: 20,
-      paddingTop: 60,
       backgroundColor: '#FF9500',  // brand colour — stays same in dark mode
     },
     title: {

@@ -22,12 +22,12 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
   Alert,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 import {
   savePermanentTemplate,
   updateTemplateCategoryInInstances,
@@ -138,7 +138,7 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top', 'bottom']} topColor={theme.bgCard} style={styles.container}>
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -263,7 +263,7 @@ export const EditPermanentTaskScreen: React.FC<EditPermanentTaskScreenProps> = (
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 

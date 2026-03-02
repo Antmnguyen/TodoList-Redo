@@ -25,6 +25,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import type { AppTheme } from '../../theme/tokens';
 
@@ -50,7 +51,8 @@ interface TabBarProps {
 
 export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(theme, insets.bottom), [theme, insets.bottom]);
 
   return (
     <View style={styles.container}>
@@ -84,14 +86,15 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) =
 // STYLES
 // =============================================================================
 
-function makeStyles(theme: AppTheme) {
+function makeStyles(theme: AppTheme, bottomInset: number) {
   return StyleSheet.create({
     // ---------------------------------------------------------------------------
     // Container - The tab bar itself
     // ---------------------------------------------------------------------------
     container: {
       flexDirection: 'row',
-      height: 65,
+      height: 65 + bottomInset,
+      paddingBottom: bottomInset,
       backgroundColor: theme.bgCard,
       borderTopWidth: 1,
       borderTopColor: theme.border,
@@ -112,7 +115,6 @@ function makeStyles(theme: AppTheme) {
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 8,
-      paddingBottom: 12, // Extra padding for home indicator on newer phones
     },
 
     // Active tab gets a subtle background highlight

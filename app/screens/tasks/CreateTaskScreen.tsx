@@ -19,12 +19,12 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useCategories, Category } from '../../features/categories';
 import { CategorySelector } from '../../components/categories/CategorySelector';
@@ -138,7 +138,7 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top', 'bottom']} topColor={theme.bgCard} style={styles.container}>
 
       {/* HEADER BAR */}
       <View style={styles.header}>
@@ -260,7 +260,7 @@ export const CreateTaskScreen: React.FC<CreateTaskScreenProps> = ({
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -280,8 +280,7 @@ function makeStyles(theme: AppTheme) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 50,
-      paddingBottom: 12,
+      paddingVertical: 12,
       backgroundColor: theme.bgCard,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.hairline,

@@ -29,13 +29,14 @@
 // =============================================================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
 import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
 import { sortTasksByCompletion } from '../../core/utils/taskSorting';
 import { Task } from '../../core/types/task';
 import { useTheme } from '../../theme/ThemeContext';
+import { Screen } from '../../components/layout/Screen';
 
 // =============================================================================
 // COMPONENT
@@ -106,7 +107,7 @@ export const AllTasksScreen: React.FC = () => {
   // ---------------------------------------------------------------------------
   return (
     // SafeAreaView ensures content doesn't overlap the phone's notch or home bar
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bgScreen }]}>
+    <Screen edges={['top']} topColor="#007AFF" style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ===================================================================
           HEADER BANNER
@@ -161,7 +162,7 @@ export const AllTasksScreen: React.FC = () => {
         onSave={handleSaveEdit}
         onClose={handleCloseEdit}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -181,7 +182,6 @@ const styles = StyleSheet.create({
   // the status bar on devices that don't use SafeAreaView padding automatically.
   header: {
     padding: 20,
-    paddingTop: 60,
     backgroundColor: '#007AFF', // Apple blue
   },
   // "All Tasks" — large, bold, white, intended to look like a nav bar title

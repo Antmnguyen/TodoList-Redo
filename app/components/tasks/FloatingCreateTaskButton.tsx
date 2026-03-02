@@ -36,6 +36,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type FloatingCreateTaskButtonProps = {
   /** Background color of the FAB - can be changed per screen */
@@ -54,6 +55,10 @@ export const FloatingCreateTaskButton: React.FC<FloatingCreateTaskButtonProps> =
   onUsePermanentTask,
   onCreatePermanentTask,
 }) => {
+  const insets = useSafeAreaInsets();
+  // Fixed 16px gap above the tab bar (65px tall + dynamic bottom inset)
+  const fabBottom = 65 + insets.bottom + 16;
+
   // Local state to control menu visibility - this is UI state, not data state,
   // so it's acceptable in a presentational component
   const [menuVisible, setMenuVisible] = useState(false);
@@ -68,7 +73,7 @@ export const FloatingCreateTaskButton: React.FC<FloatingCreateTaskButtonProps> =
     <>
       {/* THE FAB BUTTON - positioned absolute in bottom-right corner */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: color }]}
+        style={[styles.fab, { backgroundColor: color, bottom: fabBottom }]}
         onPress={() => setMenuVisible(true)}
         activeOpacity={0.85}
       >
@@ -83,7 +88,7 @@ export const FloatingCreateTaskButton: React.FC<FloatingCreateTaskButtonProps> =
         onRequestClose={() => setMenuVisible(false)}
       >
         {/* Backdrop - tapping outside menu closes it */}
-        <Pressable style={styles.backdrop} onPress={() => setMenuVisible(false)}>
+        <Pressable style={[styles.backdrop, { paddingBottom: fabBottom + 56 + 10 }]} onPress={() => setMenuVisible(false)}>
           {/* Menu container - positioned bottom-right above the FAB */}
           <View style={styles.menuContainer}>
             {/* Option 1: Create a new one-off task */}
@@ -126,7 +131,6 @@ const styles = StyleSheet.create({
   // FAB button styles - rounded box positioned in bottom-right corner
   fab: {
     position: 'absolute',
-    bottom: 90,  // 65px tab bar + 25px margin
     right: 24,
     width: 56,
     height: 56,
@@ -154,7 +158,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    paddingBottom: 156, // Positions menu above the FAB (90 FAB bottom + 56 FAB height + 10 margin)
     paddingRight: 24,  // Aligns menu with FAB's right edge
   },
   // White container holding the menu options

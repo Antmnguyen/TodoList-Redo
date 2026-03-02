@@ -306,6 +306,16 @@ const MIDNIGHT_JOB_DATE_KEY = 'midnight_job_last_run_date';
 let _midnightJobRanThisSession = false;
 
 /**
+ * Resets the in-session guard so the next runMidnightJob() call re-evaluates
+ * the SQLite date gate. Called by useTasks when the app returns to the
+ * foreground — the JS engine is still alive (no cold start) but the calendar
+ * date may have crossed midnight while the app was backgrounded.
+ */
+export function resetMidnightJobSession(): void {
+  _midnightJobRanThisSession = false;
+}
+
+/**
  * COMPUTE NEXT DUE DATE
  * ----------------------
  * Pure function (no DB calls, no side effects) that takes an autoRepeat config

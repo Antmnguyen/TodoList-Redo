@@ -41,11 +41,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Switch,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 
 import { CategoryManagementScreen } from './CategoryManagementScreen';
 import { HealthManagementScreen } from './HealthManagementScreen';
@@ -155,7 +155,7 @@ export const BrowseScreen: React.FC = () => {
   // Main list
   // ---------------------------------------------------------------------------
   return (
-    <SafeAreaView style={[styles.container]}>
+    <Screen edges={['top']} topColor="#5856D6" style={styles.container}>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
@@ -163,27 +163,27 @@ export const BrowseScreen: React.FC = () => {
         <Text style={styles.subtitle}>Manage your app features</Text>
       </View>
 
-      {/* ── Dark Mode toggle row ─────────────────────────────────────────── */}
-      <View style={styles.darkModeRow}>
-        <View style={styles.darkModeIconBadge}>
-          <Text style={styles.iconText}>🌙</Text>
-        </View>
-        <View style={styles.featureInfo}>
-          <Text style={styles.featureTitle}>Dark Mode</Text>
-          <Text style={styles.featureDesc}>{isDark ? 'On' : 'Off'}</Text>
-        </View>
-        <Switch
-          value={isDark}
-          onValueChange={toggleTheme}
-          trackColor={{ false: theme.border, true: theme.accent }}
-          thumbColor="#fff"
-        />
-      </View>
-
       {/* ── Feature card list ──────────────────────────────────────────────── */}
       <FlatList
         data={FEATURES}
         keyExtractor={(item) => item.key}
+        ListHeaderComponent={
+          <View style={styles.darkModeRow}>
+            <View style={styles.darkModeIconBadge}>
+              <Text style={styles.iconText}>🌙</Text>
+            </View>
+            <View style={styles.featureInfo}>
+              <Text style={styles.featureTitle}>Dark Mode</Text>
+              <Text style={styles.featureDesc}>{isDark ? 'On' : 'Off'}</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: theme.border, true: theme.accent }}
+              thumbColor="#fff"
+            />
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.featureRow}
@@ -204,7 +204,7 @@ export const BrowseScreen: React.FC = () => {
         )}
         contentContainerStyle={styles.list}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -222,7 +222,7 @@ function makeStyles(theme: AppTheme) {
     // Purple top bar — brand colour, stays the same in dark mode
     header: {
       padding:         20,
-      paddingTop:      60,
+      paddingTop:      20,
       backgroundColor: '#5856D6',
     },
 
