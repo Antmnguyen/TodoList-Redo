@@ -21,9 +21,9 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 
 // =============================================================================
 // TYPES
@@ -45,7 +45,7 @@ export interface TempScreenProps {
 
 export const HealthManagementScreen: React.FC<TempScreenProps> = ({ onBack }) => {
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top']} style={styles.container}>
       {/* -----------------------------------------------------------------------
           HEADER
          ----------------------------------------------------------------------- */}
@@ -66,7 +66,7 @@ export const HealthManagementScreen: React.FC<TempScreenProps> = ({ onBack }) =>
       <View style={styles.content}>
         <Text style={styles.comingSoon}>Coming Soon</Text>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -85,8 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingVertical: 12,
     backgroundColor: '#5856D6',
   },
 

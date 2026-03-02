@@ -52,6 +52,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { Screen } from '../../../components/layout/Screen';
 
 // ── Shared detail components ─────────────────────────────────────────────────
 import { DetailHeader }          from '../../../components/stats/detail/shared/DetailHeader';
@@ -197,7 +198,7 @@ export const OverallDetailScreen: React.FC<OverallDetailScreenProps> = ({
   const showCategoryYear = bucket === 'year' || bucket === 'all_time';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bgScreen }]}>
+    <Screen edges={['bottom']} style={[styles.container, { backgroundColor: theme.bgScreen }]}>
 
       {/* ── Fixed header ────────────────────────────────────────────────── */}
       <DetailHeader
@@ -304,7 +305,7 @@ export const OverallDetailScreen: React.FC<OverallDetailScreenProps> = ({
         <View style={styles.bottomPad} />
 
       </ScrollView>
-    </View>
+    </Screen>
   );
 };
 

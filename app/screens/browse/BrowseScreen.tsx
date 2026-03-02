@@ -41,11 +41,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Switch,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 
 import { CategoryManagementScreen } from './CategoryManagementScreen';
 import { HealthManagementScreen } from './HealthManagementScreen';
@@ -155,7 +155,7 @@ export const BrowseScreen: React.FC = () => {
   // Main list
   // ---------------------------------------------------------------------------
   return (
-    <SafeAreaView style={[styles.container]}>
+    <Screen edges={['top']} style={styles.container}>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
@@ -204,7 +204,7 @@ export const BrowseScreen: React.FC = () => {
         )}
         contentContainerStyle={styles.list}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -222,7 +222,7 @@ function makeStyles(theme: AppTheme) {
     // Purple top bar — brand colour, stays the same in dark mode
     header: {
       padding:         20,
-      paddingTop:      60,
+      paddingTop:      20,
       backgroundColor: '#5856D6',
     },
 

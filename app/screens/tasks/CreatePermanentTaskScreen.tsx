@@ -19,12 +19,12 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
   Alert,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 import { createTask } from '../../core/domain/taskActions';
 import { useCategories, Category } from '../../features/categories';
 import { CategorySelector } from '../../components/categories/CategorySelector';
@@ -126,7 +126,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top', 'bottom']} style={styles.container}>
 
       {/* HEADER BAR */}
       <View style={styles.header}>
@@ -245,7 +245,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -265,8 +265,7 @@ function makeStyles(theme: AppTheme) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 50,
-      paddingBottom: 12,
+      paddingVertical: 12,
       backgroundColor: theme.bgCard,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.hairline,

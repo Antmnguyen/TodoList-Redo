@@ -18,13 +18,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
   Alert,
   Modal,
 } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 
 import { useCategories } from '../../features/categories';
 import { Category } from '../../features/categories';
@@ -140,7 +140,7 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -224,7 +224,7 @@ export const CategoryManagementScreen: React.FC<CategoryManagementScreenProps> =
         onSave={handleSave}
         onCancel={closeModal}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -243,8 +243,7 @@ function makeStyles(theme: AppTheme) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingTop: 60,
-      paddingBottom: 16,
+      paddingVertical: 12,
       backgroundColor: '#5856D6',  // brand colour — stays same in dark mode
     },
     backBtn: {

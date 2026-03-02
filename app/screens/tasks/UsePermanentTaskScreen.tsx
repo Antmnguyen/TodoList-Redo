@@ -24,7 +24,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   Modal,
@@ -32,6 +31,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Screen } from '../../components/layout/Screen';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createTask } from '../../core/domain/taskActions';
 import {
@@ -334,7 +335,7 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen edges={['top', 'bottom']} style={styles.container}>
 
       {/* MAIN HEADER BAR */}
       <View style={styles.header}>
@@ -500,7 +501,7 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
           </View>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 };
 
@@ -520,8 +521,7 @@ function makeStyles(theme: AppTheme) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 50,
-      paddingBottom: 12,
+      paddingVertical: 12,
       backgroundColor: theme.bgCard,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.hairline,
