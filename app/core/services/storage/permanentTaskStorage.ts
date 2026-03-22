@@ -376,6 +376,62 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
 }
 
 /**
+ * Reverts the stats increments applied by updateTemplateStats() when a
+ * permanent task instance is uncompleted (toggled back to incomplete).
+ *
+ * Rolls back:
+ *   - templates.instanceCount  (decremented, floor 0)
+ *   - template_stats.completionCount  (decremented, floor 0)
+ *   - template_stats.currentStreak    (decremented, floor 0)
+ *   - template_stats.completionRate   (recalculated from new counts)
+ *
+ * maxStreak is intentionally left unchanged — it records the historical high
+ * and rolling it back on undo would be confusing / loss of real history.
+ *
+ * Day-of-week counters (completionMon … completionSun) are NOT rolled back
+ * here because we don't store which day the completion was attributed to on
+ * the Task object. The error is minor (one off-by-one on a weekday bucket)
+ * and avoids a potentially wrong decrement on the wrong day.
+ */
+export function revertTemplateStats(templateId: string): void {
+  // Decrement instanceCount on the template (floor 0).
+  db.runSync(
+    `UPDATE templates
+        SET instanceCount = MAX(0, instanceCount - 1)
+      WHERE permanentId = ?`,
+    [templateId],
+  );
+
+  // Read current stats so we can recalculate completionRate.
+  const rows = db.getAllSync<{ completionCount: number; currentStreak: number }>(
+    `SELECT completionCount, currentStreak FROM template_stats WHERE templateId = ?`,
+    [templateId],
+  );
+  if (rows.length === 0) return; // no stats row — nothing to revert
+
+  const newCount  = Math.max(0, rows[0].completionCount - 1);
+  const newStreak = Math.max(0, rows[0].currentStreak  - 1);
+
+  // Fetch updated instanceCount for rate recalculation.
+  const tmplRows = db.getAllSync<{ instanceCount: number }>(
+    `SELECT instanceCount FROM templates WHERE permanentId = ?`,
+    [templateId],
+  );
+  const totalInstances = tmplRows.length ? tmplRows[0].instanceCount : 0;
+  const newRate = totalInstances > 0 ? newCount / totalInstances : 0;
+
+  db.runSync(
+    `UPDATE template_stats
+        SET completionCount = ?,
+            currentStreak   = ?,
+            completionRate  = ?,
+            lastUpdatedAt   = ?
+      WHERE templateId = ?`,
+    [newCount, newStreak, newRate, Date.now(), templateId],
+  );
+}
+
+/**
  * Fetch stats for a template
  */
 export async function getTemplateStats(templateId: string): Promise<TemplateStats | null> {

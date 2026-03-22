@@ -290,14 +290,15 @@ function buildBreakdown(filter?: StatFilter): TimeRangeBreakdown {
  */
 function buildWeekBars(
   rows: Array<{ date: string; permanent: number; oneOff: number; scheduled: number }>,
+  weekStart?: string,
 ): DayData[] {
   // Index the sparse rows by date string for O(1) lookup per day.
-  const byDate    = new Map(rows.map(r => [r.date, r]));
-  // Anchor the 7 slots to this Monday — addDays(weekStart, 0..6) produces
-  // Mon, Tue, Wed, Thu, Fri, Sat, Sun in device-local time.
-  const weekStart = startOfCurrentWeek();
+  const byDate = new Map(rows.map(r => [r.date, r]));
+  // Anchor the 7 slots to the provided Monday (or fall back to this week).
+  // Must match the query range so past-week lookups hit the right date keys.
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => {
-    const row       = byDate.get(addDays(weekStart, i)); // undefined if no activity
+    const row       = byDate.get(addDays(ws, i)); // undefined if no activity
     const permanent = row?.permanent ?? 0;
     const oneOff    = row?.oneOff    ?? 0;
     return {
@@ -325,11 +326,12 @@ function buildWeekBars(
  */
 function buildWeekBarsSimple(
   rows: Array<{ date: string; completed: number; scheduled: number }>,
+  weekStart?: string,
 ): DayData[] {
-  const byDate    = new Map(rows.map(r => [r.date, r]));
-  const weekStart = startOfCurrentWeek();
+  const byDate = new Map(rows.map(r => [r.date, r]));
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => {
-    const row = byDate.get(addDays(weekStart, i));
+    const row = byDate.get(addDays(ws, i));
     return {
       day,
       count: row?.completed ?? 0,
@@ -469,8 +471,9 @@ function buildDowData(
  * component renders an empty (invisible) bar stub for that day.
  */
 function buildCategoryWeekData(
-  rows:   Array<{ date: string; categoryId: string; count: number }>,
-  catMap: Map<string, { name: string; color: string }>,
+  rows:      Array<{ date: string; categoryId: string; count: number }>,
+  catMap:    Map<string, { name: string; color: string }>,
+  weekStart?: string,
 ): CategoryDayData[] {
   // Phase 1: group rows by date.
   const byDate = new Map<string, Array<{ categoryId: string; count: number }>>();
@@ -481,10 +484,10 @@ function buildCategoryWeekData(
   }
   // Phase 2: build one CategoryDayData per day, enriching each segment with
   // name and color from catMap. Unknown categoryIds get a fallback gray.
-  const weekStart = startOfCurrentWeek();
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => ({
     day,
-    segments: (byDate.get(addDays(weekStart, i)) ?? []).map(s => ({
+    segments: (byDate.get(addDays(ws, i)) ?? []).map(s => ({
       name:  catMap.get(s.categoryId)?.name  ?? s.categoryId,
       color: catMap.get(s.categoryId)?.color ?? FALLBACK_COLOR,
       count: s.count,
@@ -1052,7 +1055,7 @@ export function useStats() {
   function getWeekBarData(weekStart: Date, filter?: StatFilter): DayData[] {
     const start = toLocalDateString(weekStart);
     const end   = addDays(start, 6);
-    return buildWeekBars(getCompletionsByDayWithKind(start, end, filter));
+    return buildWeekBars(getCompletionsByDayWithKind(start, end, filter), start);
   }
 
   /**
@@ -1062,7 +1065,7 @@ export function useStats() {
   function getWeekBarDataSimple(weekStart: Date, filter?: StatFilter): DayData[] {
     const start = toLocalDateString(weekStart);
     const end   = addDays(start, 6);
-    return buildWeekBarsSimple(getCompletionsByDay(start, end, filter));
+    return buildWeekBarsSimple(getCompletionsByDay(start, end, filter), start);
   }
 
   /**
@@ -1105,7 +1108,7 @@ export function useStats() {
     const start  = toLocalDateString(weekStart);
     const end    = addDays(start, 6);
     const catMap = getCategoryMap();
-    return buildCategoryWeekData(getCompletionsByDayByCategory(start, end), catMap);
+    return buildCategoryWeekData(getCompletionsByDayByCategory(start, end), catMap, start);
   }
 
   /**

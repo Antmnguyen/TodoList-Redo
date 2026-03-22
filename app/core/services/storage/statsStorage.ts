@@ -1028,6 +1028,33 @@ export function getLastCompletionTimestamp(templateId: string): number | null {
     : null;
 }
 
+/**
+ * Removes the most recent 'completed' entry for a task from completion_log.
+ *
+ * Called by uncompleteTask() so that undoing a completion also rolls back the
+ * stats record — the graph will no longer count the reverted completion.
+ *
+ * Only the single most recent completed row is deleted (identified by MAX
+ * completed_at). This is safe because:
+ *   - A task can only be completed once at a time (toggle model).
+ *   - If somehow duplicates exist, we only remove the latest one, which is
+ *     the one that was just undone.
+ *
+ * @param taskId - tasks.id of the task being uncompleted
+ */
+export function deleteLatestCompletion(taskId: string): void {
+  db.runSync(
+    `DELETE FROM completion_log
+     WHERE id = (
+       SELECT id FROM completion_log
+       WHERE task_id = ? AND outcome = 'completed'
+       ORDER BY completed_at DESC
+       LIMIT 1
+     )`,
+    [taskId],
+  );
+}
+
 export function getPermanentTaskSummariesForCategory(
   categoryId: string,
   startDate?: string,

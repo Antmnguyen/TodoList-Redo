@@ -12,7 +12,7 @@ import {
 // ===== STORAGE =====
 import { saveTask, getAllTasks } from '../services/storage/taskStorage';
 import { deleteTask as deleteTaskDB } from '../services/storage/taskStorage';
-import { logCompletion, logAutoFail, getLastCompletionTimestamp } from '../services/storage/statsStorage';
+import { logCompletion, logAutoFail, getLastCompletionTimestamp, deleteLatestCompletion } from '../services/storage/statsStorage';
 import { toLocalDateString } from '../utils/statsCalculations';
 // getAllTemplates is imported here (not from the permanent feature module) so
 // the scheduler can read template data without going through permanentTaskActions,
@@ -20,7 +20,7 @@ import { toLocalDateString } from '../utils/statsCalculations';
 //   taskActions → permanentTaskActions → [scheduling] → taskActions  ✗
 // Reading from permanentTaskStorage directly is safe — it's a storage layer,
 // not a business-logic layer, and taskActions already sits above it.
-import { getAllTemplates } from '../services/storage/permanentTaskStorage';
+import { getAllTemplates, revertTemplateStats } from '../services/storage/permanentTaskStorage';
 // Read/write the app_settings table so runMidnightJob can persist the last-run
 // date across cold starts without needing AsyncStorage.
 import { getAppSetting, setAppSetting } from '../services/storage/appSettingsStorage';
@@ -217,26 +217,34 @@ export async function pushTaskForward(task: Task, days: number = 1): Promise<Tas
  * Useful for undoing accidental completions.
  */
 export async function uncompleteTask(task: Task): Promise<Task> {
+  // Always remove the completion_log entry regardless of task kind.
+  // This ensures stats graphs no longer count the reverted completion.
+  deleteLatestCompletion(task.id);
+
   switch (task.kind) {
-    case 'permanent':
-      // Future: may need special handling for permanent tasks
-      // For now, treat like one-off
-      const uncompletedPerm = TaskFactory.uncomplete(task);
+    case 'permanent': {
+      // Also roll back the template-level counters that completeTask incremented.
+      const permanentId = (task.metadata as any)?.permanentId;
+      if (permanentId) {
+        revertTemplateStats(permanentId);
+      }
+      const uncompletedPerm = { ...TaskFactory.uncomplete(task), completedAt: undefined };
       await saveTask(uncompletedPerm);
       return uncompletedPerm;
-    
+    }
+
     case 'preset':
-      // Future: return await uncompletePresetTask(task);
       throw new Error('Preset task uncompletion not yet implemented');
-    
+
     case 'one_off':
-    default:
+    default: {
       const uncompleted = {
         ...TaskFactory.uncomplete(task),
-        completedAt: undefined, // Clear completion time
+        completedAt: undefined,
       };
       await saveTask(uncompleted);
       return uncompleted;
+    }
   }
 }
 
