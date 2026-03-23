@@ -99,7 +99,7 @@ export const CreatePermanentTaskScreen: React.FC<CreatePermanentTaskScreenProps>
         'permanent',
         {
           location: formData.location ? { lat: 0, lng: 0, name: formData.location } : undefined,
-          recurring: formData.autoRepeat,
+          autoRepeat: formData.autoRepeat,   // must match the key read by createPermanentTask
           categoryId: formData.categoryId,
         }
       );

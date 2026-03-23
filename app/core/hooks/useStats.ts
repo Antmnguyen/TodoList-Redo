@@ -38,7 +38,9 @@ import {
   getCompletionsByWeekday,
   getCompletionsByDayByCategory,
   getCompletionsByMonthByCategory,
-  getCompletionDates,
+  getScheduledDateSlots,
+  getCalendarDayActivity,
+  getDistinctCompletionDays,
   getStatSummary,
   getCompletionSummary,
   getTaskTypeSplit,
@@ -53,8 +55,10 @@ import {
   endOfCurrentWeek,
   startOfCurrentMonth,
   endOfCurrentMonth,
-  calcCurrentStreak,
-  calcBestStreak,
+  calcTemplateCurrentStreak,
+  calcTemplateBestStreak,
+  calcOverallCurrentStreak,
+  calcOverallBestStreak,
 } from '../utils/statsCalculations';
 
 // Component prop types — imported so this hook returns exactly the shapes
@@ -290,14 +294,15 @@ function buildBreakdown(filter?: StatFilter): TimeRangeBreakdown {
  */
 function buildWeekBars(
   rows: Array<{ date: string; permanent: number; oneOff: number; scheduled: number }>,
+  weekStart?: string,
 ): DayData[] {
   // Index the sparse rows by date string for O(1) lookup per day.
-  const byDate    = new Map(rows.map(r => [r.date, r]));
-  // Anchor the 7 slots to this Monday — addDays(weekStart, 0..6) produces
-  // Mon, Tue, Wed, Thu, Fri, Sat, Sun in device-local time.
-  const weekStart = startOfCurrentWeek();
+  const byDate = new Map(rows.map(r => [r.date, r]));
+  // Anchor the 7 slots to the provided Monday (or fall back to this week).
+  // Must match the query range so past-week lookups hit the right date keys.
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => {
-    const row       = byDate.get(addDays(weekStart, i)); // undefined if no activity
+    const row       = byDate.get(addDays(ws, i)); // undefined if no activity
     const permanent = row?.permanent ?? 0;
     const oneOff    = row?.oneOff    ?? 0;
     return {
@@ -325,11 +330,12 @@ function buildWeekBars(
  */
 function buildWeekBarsSimple(
   rows: Array<{ date: string; completed: number; scheduled: number }>,
+  weekStart?: string,
 ): DayData[] {
-  const byDate    = new Map(rows.map(r => [r.date, r]));
-  const weekStart = startOfCurrentWeek();
+  const byDate = new Map(rows.map(r => [r.date, r]));
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => {
-    const row = byDate.get(addDays(weekStart, i));
+    const row = byDate.get(addDays(ws, i));
     return {
       day,
       count: row?.completed ?? 0,
@@ -469,8 +475,9 @@ function buildDowData(
  * component renders an empty (invisible) bar stub for that day.
  */
 function buildCategoryWeekData(
-  rows:   Array<{ date: string; categoryId: string; count: number }>,
-  catMap: Map<string, { name: string; color: string }>,
+  rows:      Array<{ date: string; categoryId: string; count: number }>,
+  catMap:    Map<string, { name: string; color: string }>,
+  weekStart?: string,
 ): CategoryDayData[] {
   // Phase 1: group rows by date.
   const byDate = new Map<string, Array<{ categoryId: string; count: number }>>();
@@ -481,10 +488,10 @@ function buildCategoryWeekData(
   }
   // Phase 2: build one CategoryDayData per day, enriching each segment with
   // name and color from catMap. Unknown categoryIds get a fallback gray.
-  const weekStart = startOfCurrentWeek();
+  const ws = weekStart ?? startOfCurrentWeek();
   return DOW_LABELS.map((day, i) => ({
     day,
-    segments: (byDate.get(addDays(weekStart, i)) ?? []).map(s => ({
+    segments: (byDate.get(addDays(ws, i)) ?? []).map(s => ({
       name:  catMap.get(s.categoryId)?.name  ?? s.categoryId,
       color: catMap.get(s.categoryId)?.color ?? FALLBACK_COLOR,
       count: s.count,
@@ -569,20 +576,12 @@ export function useStats() {
     const range = bucketDateRange(bucketId); // null for 'all_time'
 
     // ── Streaks ────────────────────────────────────────────────────────────
-    // Pass range?.startDate to getCompletionDates so the date list is capped
-    // to the bucket's window. This enforces the constraint that a "week" bucket
-    // streak cannot count days before this Monday, and a "month" bucket streak
-    // cannot count days before the 1st of this month.
-    //
-    // For 'all_time', range is null so startDate is undefined — the storage
-    // function applies a 400-day lookback, which safely captures any realistic
-    // streak while bounding the result set size.
-    //
-    // We fetch the date list once and pass it to both streak functions to avoid
-    // two identical database queries.
-    const dates         = getCompletionDates(range?.startDate);
-    const currentStreak = calcCurrentStreak(dates);
-    const bestStreak    = calcBestStreak(dates);
+    // Overall streaks use calendar-day activity (not slot-based). A gap between
+    // two active days breaks the overall streak; failures on any day also
+    // break it. No bucket scoping — the overall streak is always all-time.
+    const dayActivity   = getCalendarDayActivity();
+    const currentStreak = calcOverallCurrentStreak(dayActivity);
+    const bestStreak    = calcOverallBestStreak(dayActivity);
 
     // ── Completion summary ──────────────────────────────────────────────────
     // The ring + count on CompletionSummaryCard is scoped to the bucket window.
@@ -703,11 +702,12 @@ export function useStats() {
     const now  = new Date();
     const year = now.getFullYear();
 
-    // All-time streaks — no startDate cap. We want to know the user's actual
-    // current streak for this category across all history, not just recent days.
-    const dates         = getCompletionDates(undefined, filter);
-    const currentStreak = calcCurrentStreak(dates);
-    const bestStreak    = calcBestStreak(dates);
+    // Slot-based streaks scoped to this category. Empty days between scheduled
+    // slots are neutral; only auto_failed outcomes break the streak.
+    const slots          = getScheduledDateSlots(filter);
+    const completionDays = getDistinctCompletionDays(filter);
+    const currentStreak  = calcTemplateCurrentStreak(slots, completionDays);
+    const bestStreak     = calcTemplateBestStreak(slots, completionDays);
 
     // All-time completion summary scoped to this category.
     // '2000-01-01' is used as a guaranteed-earlier-than-any-data start date
@@ -798,11 +798,12 @@ export function useStats() {
     const now  = new Date();
     const year = now.getFullYear();
 
-    // All-time streaks, template-scoped. No startDate cap — we want the full
-    // consecutive-day history for this specific task.
-    const dates         = getCompletionDates(undefined, filter);
-    const currentStreak = calcCurrentStreak(dates);
-    const bestStreak    = calcBestStreak(dates);
+    // Slot-based streaks scoped to this template. Empty days between scheduled
+    // slots are neutral; only auto_failed outcomes break the streak.
+    const slots          = getScheduledDateSlots(filter);
+    const completionDays = getDistinctCompletionDays(filter);
+    const currentStreak  = calcTemplateCurrentStreak(slots, completionDays);
+    const bestStreak     = calcTemplateBestStreak(slots, completionDays);
 
     // All-time summary scoped to this template.
     const summary     = getCompletionSummary('2000-01-01', toLocalDateString(now), filter);
@@ -858,8 +859,8 @@ export function useStats() {
    * ── Why streak is shared across all four cards ────────────────────────────
    * The "current streak" shown on an overall preview card is the user's global
    * current streak — the same value regardless of which bucket the card represents.
-   * A single getCompletionDates() call (no filter, no startDate cap) is used
-   * for all four cards to avoid four redundant streak queries.
+   * A single getCalendarDayActivity() call is shared across all four cards to
+   * avoid redundant queries.
    *
    * ── completionPercent ─────────────────────────────────────────────────────
    * Each bucket gets its own rate because the denominator differs:
@@ -874,8 +875,8 @@ export function useStats() {
 
     // Single call for all four counts — more efficient than four separate queries.
     const timeSummary = getStatSummary();
-    // Shared streak and weekly chart for all four cards (see doc above).
-    const streak     = calcCurrentStreak(getCompletionDates()); // 400-day lookback, no filter
+    // Shared overall streak for all four cards (see doc above).
+    const streak     = calcOverallCurrentStreak(getCalendarDayActivity());
     const weeklyData = buildPreviewWeek();
 
     // Per-bucket completion rates — one query each.
@@ -958,8 +959,11 @@ export function useStats() {
       // totalAttempts denominator for completionPercent.
       const summary = getCompletionSummary('2000-01-01', toLocalDateString(now), filter);
 
-      // All-time streak for this template — no startDate cap.
-      const streak = calcCurrentStreak(getCompletionDates(undefined, filter));
+      // Slot-based current streak for this template.
+      const streak = calcTemplateCurrentStreak(
+        getScheduledDateSlots(filter),
+        getDistinctCompletionDays(filter),
+      );
 
       // Current week mini-chart, template-scoped, simple (no segments).
       const weeklyData = buildPreviewWeek(filter);
@@ -1011,7 +1015,10 @@ export function useStats() {
       const filter: StatFilter = { categoryId: row.id };
 
       const summary    = getCompletionSummary('2000-01-01', toLocalDateString(now), filter);
-      const streak     = calcCurrentStreak(getCompletionDates(undefined, filter));
+      const streak     = calcTemplateCurrentStreak(
+        getScheduledDateSlots(filter),
+        getDistinctCompletionDays(filter),
+      );
       const weeklyData = buildPreviewWeek(filter);
       // Use category's own color, fall back to gray if the column is null.
       const color      = row.color ?? FALLBACK_COLOR;
@@ -1052,7 +1059,7 @@ export function useStats() {
   function getWeekBarData(weekStart: Date, filter?: StatFilter): DayData[] {
     const start = toLocalDateString(weekStart);
     const end   = addDays(start, 6);
-    return buildWeekBars(getCompletionsByDayWithKind(start, end, filter));
+    return buildWeekBars(getCompletionsByDayWithKind(start, end, filter), start);
   }
 
   /**
@@ -1062,7 +1069,7 @@ export function useStats() {
   function getWeekBarDataSimple(weekStart: Date, filter?: StatFilter): DayData[] {
     const start = toLocalDateString(weekStart);
     const end   = addDays(start, 6);
-    return buildWeekBarsSimple(getCompletionsByDay(start, end, filter));
+    return buildWeekBarsSimple(getCompletionsByDay(start, end, filter), start);
   }
 
   /**
@@ -1105,7 +1112,7 @@ export function useStats() {
     const start  = toLocalDateString(weekStart);
     const end    = addDays(start, 6);
     const catMap = getCategoryMap();
-    return buildCategoryWeekData(getCompletionsByDayByCategory(start, end), catMap);
+    return buildCategoryWeekData(getCompletionsByDayByCategory(start, end), catMap, start);
   }
 
   /**
@@ -1166,7 +1173,7 @@ export function useStats() {
       })
       .sort((a, b) => b.total - a.total); // most active category first
 
-    const streak = calcCurrentStreak(getCompletionDates());
+    const streak = calcOverallCurrentStreak(getCalendarDayActivity());
 
     return {
       totalTasks,

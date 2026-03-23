@@ -150,7 +150,13 @@ export async function deletePermanentTemplate(templateId: string): Promise<void>
 // ======== INSTANCE OPERATIONS ========
 
 /**
- * Save a permanent task instance
+ * Save a permanent task instance.
+ *
+ * Only writes the instance row — does NOT touch instanceCount on the parent
+ * template.  instanceCount is incremented exclusively in updateTemplateStats()
+ * (the completion path) so the counter reflects "times completed" rather than
+ * "times created", fixing the double-count that occurred when this function
+ * was called on both creation and completion.
  */
 export async function savePermanentInstance(instance: PermanentTask): Promise<void> {
   db.runSync(
@@ -158,13 +164,6 @@ export async function savePermanentInstance(instance: PermanentTask): Promise<vo
       (instanceId, templateId, createdAt, dueDate, category_id)
      VALUES (?, ?, ?, ?, ?)`,
     [instance.id, instance.permanentId, instance.createdAt, instance.dueDate || null, instance.categoryId || null]
-  );
-
-  db.runSync(
-    `UPDATE templates
-       SET instanceCount = instanceCount + 1
-     WHERE permanentId = ?`,
-    [instance.permanentId]
   );
 }
 
@@ -325,8 +324,8 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
   }
 
   stats.completionCount += 1;
-  stats.currentStreak += 1;
-  if (stats.currentStreak > stats.maxStreak) stats.maxStreak = stats.currentStreak;
+  // currentStreak / maxStreak are no longer updated here — streaks are computed
+  // on-demand from completion_log by statsStorage / useStats.
 
   const day = new Date(completedAt).getDay();
   switch (day) {
@@ -338,6 +337,13 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
     case 5: stats.completionFri += 1; break;
     case 6: stats.completionSat += 1; break;
   }
+
+  // Increment instanceCount here — this is the sole place it is bumped so the
+  // counter only ticks up on completion, not on creation.
+  db.runSync(
+    `UPDATE templates SET instanceCount = instanceCount + 1 WHERE permanentId = ?`,
+    [templateId]
+  );
 
   const instanceRows = db.getAllSync<{ instanceCount: number }>(
     `SELECT instanceCount FROM templates WHERE permanentId = ?`, [templateId]
@@ -366,6 +372,60 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
       stats.completionSun,
       Date.now()
     ]
+  );
+}
+
+/**
+ * Reverts the stats increments applied by updateTemplateStats() when a
+ * permanent task instance is uncompleted (toggled back to incomplete).
+ *
+ * Rolls back:
+ *   - templates.instanceCount  (decremented, floor 0)
+ *   - template_stats.completionCount  (decremented, floor 0)
+ *   - template_stats.currentStreak    (decremented, floor 0)
+ *   - template_stats.completionRate   (recalculated from new counts)
+ *
+ * maxStreak is intentionally left unchanged — it records the historical high
+ * and rolling it back on undo would be confusing / loss of real history.
+ *
+ * Day-of-week counters (completionMon … completionSun) are NOT rolled back
+ * here because we don't store which day the completion was attributed to on
+ * the Task object. The error is minor (one off-by-one on a weekday bucket)
+ * and avoids a potentially wrong decrement on the wrong day.
+ */
+export function revertTemplateStats(templateId: string): void {
+  // Decrement instanceCount on the template (floor 0).
+  db.runSync(
+    `UPDATE templates
+        SET instanceCount = MAX(0, instanceCount - 1)
+      WHERE permanentId = ?`,
+    [templateId],
+  );
+
+  // Read current stats so we can recalculate completionRate.
+  const rows = db.getAllSync<{ completionCount: number }>(
+    `SELECT completionCount FROM template_stats WHERE templateId = ?`,
+    [templateId],
+  );
+  if (rows.length === 0) return; // no stats row — nothing to revert
+
+  const newCount = Math.max(0, rows[0].completionCount - 1);
+
+  // Fetch updated instanceCount for rate recalculation.
+  const tmplRows = db.getAllSync<{ instanceCount: number }>(
+    `SELECT instanceCount FROM templates WHERE permanentId = ?`,
+    [templateId],
+  );
+  const totalInstances = tmplRows.length ? tmplRows[0].instanceCount : 0;
+  const newRate = totalInstances > 0 ? newCount / totalInstances : 0;
+
+  db.runSync(
+    `UPDATE template_stats
+        SET completionCount = ?,
+            completionRate  = ?,
+            lastUpdatedAt   = ?
+      WHERE templateId = ?`,
+    [newCount, newRate, Date.now(), templateId],
   );
 }
 

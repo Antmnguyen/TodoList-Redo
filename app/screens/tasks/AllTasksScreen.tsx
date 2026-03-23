@@ -33,7 +33,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTasks } from '../../core/hooks/useTasks';
 import { TaskList } from '../../components/tasks/TaskList';
 import { EditTaskModal, EditTaskData } from '../../components/tasks/EditTaskModal';
-import { sortTasksByCompletion } from '../../core/utils/taskSorting';
+import { sortTasksByCompletionAndCategory } from '../../core/utils/taskSorting';
 import { Task } from '../../core/types/task';
 import { useTheme } from '../../theme/ThemeContext';
 import { Screen } from '../../components/layout/Screen';
@@ -64,12 +64,11 @@ export const AllTasksScreen: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // Sort tasks so incomplete tasks appear first and completed tasks last.
-  // useMemo means this re-sorts only when the tasks array actually changes,
-  // not on every render — keeps the screen fast.
-  // Uses sortTasksByCompletion from app/core/utils/taskSorting.ts
+  // Sort tasks: incomplete first, complete last. Within each group, tasks with
+  // the same category are adjacent (no-category tasks sort last within group).
+  // Uses sortTasksByCompletionAndCategory from app/core/utils/taskSorting.ts
   // ---------------------------------------------------------------------------
-  const sortedTasks = useMemo(() => sortTasksByCompletion(tasks), [tasks]);
+  const sortedTasks = useMemo(() => sortTasksByCompletionAndCategory(tasks), [tasks]);
 
   // ---------------------------------------------------------------------------
   // HANDLERS

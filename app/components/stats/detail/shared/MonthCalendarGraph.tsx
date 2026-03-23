@@ -42,7 +42,7 @@
 // =============================================================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, LayoutChangeEvent, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../../../theme/ThemeContext';
 import type { AppTheme } from '../../../../theme/tokens';
 
@@ -150,14 +150,36 @@ function getProgressInfo(
 // =============================================================================
 
 interface SquareProgressBorderProps {
-  size: number;
   progress: number;
   color: string;
 }
 
 /**
- * Renders the colored clockwise-sweeping progress arc.
- * Uses a single View with borderWidth to ensure perfectly rounded inner corners.
+ * Renders a continuous clockwise-sweeping colored progress fill.
+ *
+ * TWO-LAYER ARCHITECTURE — preserves rounded inner corners:
+ *
+ *   Layer 1 — completed sides:
+ *     A single View with per-side borderColor (transparent or colored).
+ *     The OS renders all colored sides as one continuous path with mitered
+ *     joints, naturally producing concentric-rounded inner corners that match
+ *     the cell's borderRadius.  This is identical to the original approach.
+ *
+ *   Layer 2 — transitioning side:
+ *     At any moment exactly one side is partially filled (fill between 0–1).
+ *     A clip container sized to the filled proportion reveals an inner border
+ *     View for just that side.  The inner View also uses borderRadius + a
+ *     single per-side borderColor, so its visible corner inherits the same
+ *     concentric-rounded inner-corner shape.
+ *     The clip only cuts through the STRAIGHT portion of the border (never
+ *     through a curved corner area), so no sharp-corner artefact occurs.
+ *
+ * Sweep order:  top (left→right)  →  right (top→bottom)
+ *           →  bottom (right→left) →  left  (bottom→top)
+ *
+ * BIG is a pixel value large enough that any inner border View extends well
+ * beyond the clip container on the unconstrained axis.  200 px is safely
+ * larger than any calendar cell (typically 36–44 px).
  */
 const SquareProgressBorder: React.FC<SquareProgressBorderProps> = ({
   progress,
@@ -165,28 +187,116 @@ const SquareProgressBorder: React.FC<SquareProgressBorderProps> = ({
 }) => {
   if (progress <= 0) return null;
 
-  const R = 8; // Parent border radius
-  const B = BORDER_T;
+  const R   = 8;          // must match DayCell box borderRadius
+  const B   = BORDER_T;
+  const BIG = 200;        // oversized dimension — clipped by parent overflow:hidden
 
-  // Split progress into 4 segments to simulate the clockwise reveal
-  const showTop = progress > 0;
-  const showRight = progress > 0.25;
-  const showBottom = progress > 0.5;
-  const showLeft = progress > 0.75;
+  // Proportional fill (0–1) within each side's segment of the perimeter.
+  const topFill    = Math.min(Math.max( progress          / 0.25, 0), 1);
+  const rightFill  = Math.min(Math.max((progress - 0.25)  / 0.25, 0), 1);
+  const bottomFill = Math.min(Math.max((progress - 0.50)  / 0.25, 0), 1);
+  const leftFill   = Math.min(Math.max((progress - 0.75)  / 0.25, 0), 1);
+
+  const topDone    = topFill    >= 1;
+  const rightDone  = rightFill  >= 1;
+  const bottomDone = bottomFill >= 1;
+  const leftDone   = leftFill   >= 1;
 
   return (
-    <View style={[StyleSheet.absoluteFill, { borderRadius: R, overflow: 'hidden' }]} pointerEvents="none">
-      <View style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        borderRadius: R,
-        borderWidth: B,
-        borderColor: 'transparent',
-        borderTopColor: showTop ? color : 'transparent',
-        borderRightColor: showRight ? color : 'transparent',
-        borderBottomColor: showBottom ? color : 'transparent',
-        borderLeftColor: showLeft ? color : 'transparent',
-      }} />
+    <View
+      style={[StyleSheet.absoluteFill, { borderRadius: R, overflow: 'hidden' }]}
+      pointerEvents="none"
+    >
+
+      {/* ── Layer 1: fully completed sides ─────────────────────────────────
+          Single-view transparent-border technique — OS draws as one continuous
+          path giving concentric-rounded inner corners on all completed sides. */}
+      {(topDone || rightDone || bottomDone || leftDone) && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          borderRadius: R, borderWidth: B, borderColor: 'transparent',
+          borderTopColor:    topDone    ? color : 'transparent',
+          borderRightColor:  rightDone  ? color : 'transparent',
+          borderBottomColor: bottomDone ? color : 'transparent',
+          borderLeftColor:   leftDone   ? color : 'transparent',
+        }} />
+      )}
+
+      {/* ── Layer 2: the one side currently transitioning ──────────────────
+          Clip container constrains how much of the inner border View is visible.
+          The inner View uses the same borderRadius approach so its leading
+          corner (the cell corner where the sweep started on this side) has
+          a correctly-rounded inner corner.  The clip cuts only the straight
+          portion mid-side — never through a corner curve. */}
+
+      {/* Top — sweeps left → right */}
+      {topFill > 0 && !topDone && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0,
+          width: `${topFill * 100}%`, height: '100%',
+          overflow: 'hidden',
+        }}>
+          {/* Anchored top-left so its borderRadius aligns with the cell corner */}
+          <View style={{
+            position: 'absolute', top: 0, left: 0,
+            width: BIG, height: '100%',
+            borderRadius: R, borderWidth: B, borderColor: 'transparent',
+            borderTopColor: color,
+          }} />
+        </View>
+      )}
+
+      {/* Right — sweeps top → bottom */}
+      {rightFill > 0 && !rightDone && (
+        <View style={{
+          position: 'absolute', top: 0, right: 0,
+          width: '100%', height: `${rightFill * 100}%`,
+          overflow: 'hidden',
+        }}>
+          {/* Anchored top-right so its borderRadius aligns with the cell corner */}
+          <View style={{
+            position: 'absolute', top: 0, left: 0, right: 0,
+            height: BIG,
+            borderRadius: R, borderWidth: B, borderColor: 'transparent',
+            borderRightColor: color,
+          }} />
+        </View>
+      )}
+
+      {/* Bottom — sweeps right → left */}
+      {bottomFill > 0 && !bottomDone && (
+        <View style={{
+          position: 'absolute', bottom: 0, right: 0,
+          width: `${bottomFill * 100}%`, height: '100%',
+          overflow: 'hidden',
+        }}>
+          {/* Anchored bottom-right so its borderRadius aligns with the cell corner */}
+          <View style={{
+            position: 'absolute', bottom: 0, right: 0,
+            width: BIG, height: '100%',
+            borderRadius: R, borderWidth: B, borderColor: 'transparent',
+            borderBottomColor: color,
+          }} />
+        </View>
+      )}
+
+      {/* Left — sweeps bottom → top */}
+      {leftFill > 0 && !leftDone && (
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0,
+          width: '100%', height: `${leftFill * 100}%`,
+          overflow: 'hidden',
+        }}>
+          {/* Anchored bottom-left so its borderRadius aligns with the cell corner */}
+          <View style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: BIG,
+            borderRadius: R, borderWidth: B, borderColor: 'transparent',
+            borderLeftColor: color,
+          }} />
+        </View>
+      )}
+
     </View>
   );
 };
@@ -213,22 +323,17 @@ const DayCell: React.FC<DayCellProps> = ({
   fillColor,
   trackColor,
 }) => {
-  const [cellSize, setCellSize] = useState(0);
   const { theme } = useTheme();
   const styles = useMemo(() => makeCellStyles(theme), [theme]);
 
   if (dayNumber === 0) return <View style={styles.box} />;
 
-  const handleLayout = (e: LayoutChangeEvent) => {
-    const w = Math.round(e.nativeEvent.layout.width);
-    if (w !== cellSize) setCellSize(w);
-  };
-
   const textColor = hasData ? theme.textPrimary : theme.textDisabled;
 
   return (
-    <View style={styles.box} onLayout={handleLayout}>
+    <View style={styles.box}>
 
+      {/* Grey perimeter track — always visible when the day has data */}
       {hasData && (
         <View
           pointerEvents="none"
@@ -242,9 +347,9 @@ const DayCell: React.FC<DayCellProps> = ({
         />
       )}
 
+      {/* Continuous colored fill — overlays the track clockwise */}
       {hasData && fillProgress > 0 && (
         <SquareProgressBorder
-          size={cellSize}
           progress={fillProgress}
           color={fillColor}
         />

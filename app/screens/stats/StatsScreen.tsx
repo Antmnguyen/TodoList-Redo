@@ -95,7 +95,7 @@ interface CollapsibleSectionProps {
 
 const ANIM_DURATION_OPEN  = 320;
 const ANIM_DURATION_CLOSE = 240;
-const MAX_CONTENT_HEIGHT  = 2000;
+const MAX_CONTENT_HEIGHT  = 9999;
 
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   title,

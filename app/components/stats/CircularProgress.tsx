@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
 
 // =============================================================================
 // TYPES
@@ -38,6 +39,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
   color = '#FF9500',
   trackWidth = 7,
 }) => {
+  const { theme } = useTheme();
   const p = Math.max(0, Math.min(100, Math.round(percent)));
   const angle = (p / 100) * 360;
   const half = size / 2;
@@ -120,7 +122,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
         }} />
       </View>
 
-      {/* ── White inner disc → creates the ring hole ───────────────────── */}
+      {/* ── Inner disc → creates the ring hole, matches card background ─── */}
       <View style={{
         position: 'absolute',
         top: trackWidth,
@@ -128,15 +130,19 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
         width: innerSize,
         height: innerSize,
         borderRadius: innerRadius,
-        backgroundColor: '#ffffff',
+        backgroundColor: theme.bgCard,
         justifyContent: 'center',
         alignItems: 'center',
       }}>
         <Text style={{
           fontSize: innerSize * 0.24,
           fontWeight: '700',
-          color: '#1a1a1a',
+          color: theme.textPrimary,
           includeFontPadding: false,
+          backgroundColor: 'transparent',
+          textShadowColor: 'transparent',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 0,
         }}>
           {p}%
         </Text>

@@ -336,32 +336,44 @@ This works nicely in both light and dark mode without a separate dark theme
 override. `opacity: 0.6` is enough to read the title while clearly conveying
 "done".
 
-### 4.2 Header Consistency
+### 4.2 Header Consistency ✅
 
-Current state:
-- `AllTasksScreen` — blue `#007AFF`, large title, `paddingTop: 60`
-- `TodayScreen` — green `#34C759`, large title, `paddingTop: 60`
-- `UsePermanentTaskScreen` — white bar, standard iOS nav-bar style
-- `HistoryManagementScreen` — purple `#5856D6`, back button, centred title
+All screens now use the `Screen` component from `app/components/layout/Screen.tsx`
+instead of raw `SafeAreaView`. The `topColor` prop fills the OS status-bar inset slot
+with the header's brand colour so there is no blank gap at the top of any screen.
+All `paddingTop: 60` / `paddingTop: 50` hacks have been removed.
 
-**Proposed standard for "big" tab headers (AllTasks, Today):**
+See `safe-area-container.md` for the full implementation, edges guide, and per-screen
+`topColor` table.
+
+**Tab headers (AllTasks, Today, Stats, Browse) — standard:**
 ```
-paddingTop: 60  paddingHorizontal: 20  paddingBottom: 16
+edges={['top']}  topColor=<brand colour>
+paddingHorizontal: 20  paddingVertical: 20  (no extra top padding needed)
 fontSize: 32 bold white title
 fontSize: 16 white subtitle (count)
 ```
-These two screens already match — keep them as-is.
 
-**Proposed standard for "overlay" headers (UseTemplate, History, CreateTask, etc.):**
+**Overlay headers (CreateTask, CreatePermanentTask, UsePermanentTask, EditPermanentTask) — standard:**
 ```
+edges={['top', 'bottom']}  topColor={theme.bgCard}
 flexDirection: row  justifyContent: space-between
 paddingHorizontal: 16  paddingVertical: 12
 backgroundColor: theme.bgCard
 borderBottom: hairline theme.hairline
 ```
-Consistent across all overlay screens. Currently UseTemplate has a debug
-`rgba(0,122,255,0.1)` background on header buttons — **remove this in
-implementation** (it was noted as a debug visual in the source).
+
+**Browse sub-screen headers (Category, History, Location, Health) — standard:**
+```
+edges={['top']}  topColor="#5856D6"
+paddingHorizontal: 16  paddingVertical: 12
+backgroundColor: #5856D6
+```
+
+**Detail screens (OverallDetail, PermanentDetail, CategoryDetail):**
+```
+edges={['bottom']}  (no topColor — DetailHeader calls useSafeAreaInsets() internally)
+```
 
 ### 4.3 TodayScreen Filter Tab Bar ✅
 
@@ -586,7 +598,8 @@ const checkboxColor = task.kind === 'permanent'
 
 ```tsx
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Screen } from '../../components/layout/Screen';
 import { useTheme } from '../../theme/ThemeContext';
 import type { AppTheme } from '../../theme/tokens';
 
@@ -595,11 +608,14 @@ export const ExampleScreen: React.FC = () => {
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    // Tab screen: edges={['top']} + topColor fills status-bar slot with brand colour
+    // Overlay screen: edges={['top', 'bottom']} + topColor={theme.bgCard}
+    // Detail screen: edges={['bottom']} (DetailHeader handles top internally)
+    <Screen edges={['top']} topColor="#007AFF" style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Hello</Text>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 };
 

@@ -11,6 +11,7 @@
 |------|--------|-------|
 | Template Management (edit/delete) | ✅ Complete | `EditPermanentTaskScreen`, ⋮ menu, `updateTemplateCategoryInInstances` |
 | Auto-Repeat Scheduling | ✅ Complete | `runMidnightJob` in `taskActions.ts`; real midnight date gate via `app_settings` SQLite table; see `midnight-job.md` |
+| Safe Area / Screen Wrapper | ✅ Complete | `Screen.tsx` with `topColor`; all screens migrated; TabBar + FAB use dynamic insets; see `Aesthetics/safe-area-container.md` |
 | Browse Screen | 🔄 In Progress | Sections added per commits |
 | Statistics | ✅ Complete (Sprint 4/5) | Stats screen wired to backend |
 | Completed Tasks Auto-Hide (2.1) | ⬜ Not Started | |

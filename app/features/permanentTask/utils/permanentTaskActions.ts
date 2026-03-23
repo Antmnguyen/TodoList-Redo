@@ -181,10 +181,11 @@ export async function handlePermanentCompletion(task: Task): Promise<Task> {
     categoryId: task.categoryId,
   };
 
-  // Save the completed instance
-  await savePermanentInstance(permanentTask);
-
-  // Update template statistics
+  // Update template statistics.
+  // savePermanentInstance is intentionally NOT called here — template_instances
+  // has no completed column so there is nothing to update in that table on
+  // completion.  The only side-effect of calling it here was a duplicate
+  // instanceCount increment, which is now fixed (count lives in updateTemplateStats).
   await updateTemplateStats(
     permanentTask.permanentId,
     completedAt

@@ -40,6 +40,7 @@ import {
   deletePermanentTask,
 } from '../../features/permanentTask/utils/permanentTaskActions';
 import { Task } from '../../core/types/task';
+import { sortTasksByCompletionAndCategory } from '../../core/utils/taskSorting';
 import { useTheme } from '../../theme/ThemeContext';
 import type { AppTheme } from '../../theme/tokens';
 
@@ -106,6 +107,8 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const [templates, setTemplates] = useState<Task[]>([]);
+  // Templates grouped by category so same-category items are adjacent.
+  const sortedTemplates = useMemo(() => sortTasksByCompletionAndCategory(templates), [templates]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
@@ -362,7 +365,7 @@ export const UsePermanentTaskScreen: React.FC<UsePermanentTaskScreenProps> = ({
         </View>
       ) : (
         <FlatList
-          data={templates}
+          data={sortedTemplates}
           keyExtractor={(item) => item.id}
           renderItem={renderTemplateItem}
           ListEmptyComponent={renderEmptyList}
