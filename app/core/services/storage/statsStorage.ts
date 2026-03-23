@@ -578,6 +578,80 @@ export function getCompletionsByMonthByCategory(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Returns one row per distinct `scheduled_date` for the given scope, with
+ * failure and success counts. Used as input to the slot-based streak functions
+ * (`calcTemplateCurrentStreak`, `calcTemplateBestStreak`).
+ *
+ * Rows with `scheduled_date IS NULL` are excluded — backfilled historical rows
+ * that predate the completion_log migration lack a reliable scheduled_date and
+ * cannot participate in slot-based streak calculations.
+ *
+ * @param filter - Optional scope (template or category). Omit for all templates.
+ * @returns Ascending array of scheduled-date slot rows
+ */
+export function getScheduledDateSlots(
+  filter?: StatFilter,
+): Array<{ scheduled_date: string; failures: number; successes: number }> {
+  const { clause, params } = buildFilterClause(filter);
+  return db.getAllSync<{ scheduled_date: string; failures: number; successes: number }>(
+    `SELECT scheduled_date,
+            SUM(CASE WHEN outcome = 'auto_failed' THEN 1 ELSE 0 END) AS failures,
+            SUM(CASE WHEN outcome = 'completed'   THEN 1 ELSE 0 END) AS successes
+     FROM completion_log
+     WHERE scheduled_date IS NOT NULL${clause}
+     GROUP BY scheduled_date
+     ORDER BY scheduled_date ASC`,
+    [...params],
+  );
+}
+
+/**
+ * Returns one row per calendar day that has any logged activity, with failure
+ * and success counts. Used as input to the overall streak functions
+ * (`calcOverallCurrentStreak`, `calcOverallBestStreak`).
+ *
+ * Uses `completed_date` (never null) so all history — including backfilled
+ * rows — is included.
+ *
+ * @returns Ascending array of calendar-day activity rows
+ */
+export function getCalendarDayActivity(): Array<{
+  completed_date: string;
+  failures: number;
+  successes: number;
+}> {
+  return db.getAllSync<{ completed_date: string; failures: number; successes: number }>(
+    `SELECT completed_date,
+            SUM(CASE WHEN outcome = 'auto_failed' THEN 1 ELSE 0 END) AS failures,
+            SUM(CASE WHEN outcome = 'completed'   THEN 1 ELSE 0 END) AS successes
+     FROM completion_log
+     GROUP BY completed_date
+     ORDER BY completed_date ASC`,
+    [],
+  );
+}
+
+/**
+ * Returns distinct `completed_date` values (ascending) where at least one
+ * completion was logged for the given scope. Used as the `completionDays`
+ * input to slot-based streak functions to enforce the 1-increment-per-day cap.
+ *
+ * @param filter - Optional scope (template or category)
+ * @returns Sorted ascending array of date strings
+ */
+export function getDistinctCompletionDays(filter?: StatFilter): string[] {
+  const { clause, params } = buildFilterClause(filter);
+  const rows = db.getAllSync<{ completed_date: string }>(
+    `SELECT DISTINCT completed_date
+     FROM completion_log
+     WHERE outcome = 'completed'${clause}
+     ORDER BY completed_date ASC`,
+    [...params],
+  );
+  return rows.map(r => r.completed_date);
+}
+
+/**
  * Returns an ascending array of distinct calendar dates ('YYYY-MM-DD') that
  * have at least one completion matching the optional filter.
  *

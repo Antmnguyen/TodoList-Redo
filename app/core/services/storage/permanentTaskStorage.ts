@@ -324,8 +324,8 @@ export async function updateTemplateStats(templateId: string, completedAt: numbe
   }
 
   stats.completionCount += 1;
-  stats.currentStreak += 1;
-  if (stats.currentStreak > stats.maxStreak) stats.maxStreak = stats.currentStreak;
+  // currentStreak / maxStreak are no longer updated here — streaks are computed
+  // on-demand from completion_log by statsStorage / useStats.
 
   const day = new Date(completedAt).getDay();
   switch (day) {
@@ -403,14 +403,13 @@ export function revertTemplateStats(templateId: string): void {
   );
 
   // Read current stats so we can recalculate completionRate.
-  const rows = db.getAllSync<{ completionCount: number; currentStreak: number }>(
-    `SELECT completionCount, currentStreak FROM template_stats WHERE templateId = ?`,
+  const rows = db.getAllSync<{ completionCount: number }>(
+    `SELECT completionCount FROM template_stats WHERE templateId = ?`,
     [templateId],
   );
   if (rows.length === 0) return; // no stats row — nothing to revert
 
-  const newCount  = Math.max(0, rows[0].completionCount - 1);
-  const newStreak = Math.max(0, rows[0].currentStreak  - 1);
+  const newCount = Math.max(0, rows[0].completionCount - 1);
 
   // Fetch updated instanceCount for rate recalculation.
   const tmplRows = db.getAllSync<{ instanceCount: number }>(
@@ -423,11 +422,10 @@ export function revertTemplateStats(templateId: string): void {
   db.runSync(
     `UPDATE template_stats
         SET completionCount = ?,
-            currentStreak   = ?,
             completionRate  = ?,
             lastUpdatedAt   = ?
       WHERE templateId = ?`,
-    [newCount, newStreak, newRate, Date.now(), templateId],
+    [newCount, newRate, Date.now(), templateId],
   );
 }
 

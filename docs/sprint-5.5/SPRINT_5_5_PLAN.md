@@ -47,18 +47,17 @@ _Complex, higher-risk work. Requires focused investigation before implementation
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| L1 | Streaks — not being calculated correctly | `[ ]` | Investigate root cause before touching logic |
-  Streak logic, Streaks should be calculated based on streaks of ASSIGNED completion, not streaks of days. For permant tasks this means as long as all instances of the permant task / category is completed before the asssinged due date the streak is incremented.  So lets say I have perm task / a set of tasks for category A  due on wenesday,  and one friday.  If I complete all the tasks on wenesday that is + 1 to the streak.  If I do NOTHING on thursday, the streak stille exists, and then complete all before friday the streak is incremented again +1.  These streaks are calculated daily, an edge case would be having  tasks due monday tuesdya wenesday and you complete them all on monday, in this case we go by day range, the range of tasks were 3 days, our streak only increases by 1 in this case as we only increment by 1 a day IN THE EVENT we complete a task. So if we complete an instance of a task. AND said task was due today increment streak by one.  If we have task due on monday and one on tuesday and we compelte both on tuesday we only incremnt by one. Task streaks only increase from completion of the category / streak on that day, AND THEY ONLY RESET IF YOU MISS A DUE DATE. so EMPTY DATES between two instances of permant tasks or categories do not warrant a failure of the task and reseeting of the streak. It is only a FAILURE to complete a task on time does this fail. However in the case of overall overall works simirailry except overall covers EVERY TASK so every task for the day must be compelted for overall streak to increase. and if you miss a single task overall dies. (while keeping the yearly monthly weekely logic sound)
+| L1 | Streaks — not being calculated correctly | `[x]` | See LARGE_FIXES.md for full implementation detail |
 | L2 | Repeatable tasks — broken in multiple places across the app | `[ ]` | Audit all repeat-task code paths first |
 
 ---
 
 ## Progress Tracking
 
-**Small:** 5 / 6 done  (S1 S2 S3 S4 S5 S6 — only S4/S6 remained, both done this session)
+**Small:** 6 / 6 done  (S1 S2 S3 S4 S5 S6)
 **Medium:** 4 / 6 done  (M1 M2 M3 M4 done — M5 M6 pending)
-**Large:** 0 / 2 done
-**Total:** 9 / 14 done
+**Large:** 1 / 2 done  (L1 done — L2 pending)
+**Total:** 11 / 14 done
 
 Update the table statuses and the counts above as work completes. Move items to `[~]` when actively in progress and `[x]` when merged/verified.
 
@@ -87,3 +86,23 @@ Two issues in `CircularProgress.tsx`: (1) inner disc `backgroundColor` was hardc
 **S6 — Collapsible sections clipping long lists**
 `MAX_CONTENT_HEIGHT = 2000` in `StatsScreen.tsx` was too small for users with many permanent tasks or categories. Raised to `9999` — content naturally stops at its real height so nothing is clipped regardless of list size.
 - Files: `app/screens/stats/StatsScreen.tsx`
+
+---
+
+## Session Notes — 2026-03-23
+
+### Fixes completed this session
+
+**L1 — Streak calculation rewrite**
+The old implementation counted consecutive calendar days with any completion, which meant a weekly task would reset its streak every non-completion day. Replaced with two separate models as specified in `LARGE_FIXES.md`:
+
+- **Template / category streaks** (slot-based): streak increments once per distinct completion day that covers a scheduled-date slot with no failures. Empty days between slots are neutral. Any `auto_failed` outcome resets to 0.
+- **Overall streaks** (calendar-day): streak counts consecutive calendar days with ≥1 completion and 0 failures. A gap or any failure breaks it.
+
+New storage functions in `statsStorage.ts`: `getScheduledDateSlots(filter?)`, `getCalendarDayActivity()`, `getDistinctCompletionDays(filter?)`.
+New calculation functions in `statsCalculations.ts`: `calcTemplateCurrentStreak`, `calcTemplateBestStreak`, `calcOverallCurrentStreak`, `calcOverallBestStreak`.
+All 7 streak call sites in `useStats.ts` updated to use the new functions. Naive streak increment removed from `updateTemplateStats` and `revertTemplateStats` in `permanentTaskStorage.ts` — streaks are now computed on-demand from `completion_log`, never stored in `template_stats`.
+
+Sanity check confirmed: `scheduled_date` in `completion_log` correctly tracks the task due date at the time of completion. Editing a task's due date before completion propagates correctly through both in-memory state and the DB (`tasks.due_date` / `template_instances.dueDate`), so `scheduled_date` is always accurate.
+
+- Files: `app/core/utils/statsCalculations.ts`, `app/core/services/storage/statsStorage.ts`, `app/core/hooks/useStats.ts`, `app/core/services/storage/permanentTaskStorage.ts`
