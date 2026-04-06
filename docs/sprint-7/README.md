@@ -46,7 +46,7 @@ The HC system calls into the existing task layer as a consumer — never the oth
 1. Add state in the component body (before any early return — Rules of Hooks).
 2. Load data inside `useEffect` on mount using storage functions from `healthConnectStorage.ts`.
 3. Pass data through `computeStepsStats` / `computeSleepStats` (in `healthConnectUtils.ts`) for derived stats.
-4. Render using existing shared components: `CircularProgress`, `WeekBarGraph`, `MonthCalendarGraph`, `StreakCard`, `DayOfWeekPatternCard`.
+4. Render using existing shared components: `CircularProgress`, `WeekBarGraph`, `MonthCalendarGraph`, `StreakCard`, `HealthDayOfWeekCard`.
 
 ### How to add a new detail screen
 
@@ -54,6 +54,29 @@ The HC system calls into the existing task layer as a consumer — never the oth
 2. Declare all hooks unconditionally at the top — no early returns before hook declarations.
 3. Add a navigation case to `HealthManagementScreen.tsx` (it controls sub-screen routing via local state, not a navigator stack).
 4. Import from `healthConnectStorage.ts` for data and `healthConnectActions.ts` for side effects.
+
+### Key shared components for health screens
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `HealthDayOfWeekCard` | `components/stats/detail/shared/HealthDayOfWeekCard.tsx` | Avg steps or sleep hours by weekday. Toggle between Avg (formatted value) and % (avgValue ÷ goal). **Health-specific — do not use `DayOfWeekPatternCard` for continuous health metrics.** |
+| `DayOfWeekPatternCard` | `components/stats/detail/shared/DayOfWeekPatternCard.tsx` | Task completion counts / rates by weekday. For task stat screens only — its `count` field is binary (done/not done), not a continuous measurement. |
+
+**`HealthDayOfWeekCard` props:**
+```ts
+data:  HealthDayOfWeekData[]  // 7 items, Mon=0 … Sun=6
+        // { day: string, avgValue: number, count: number }
+goal:  number   // steps goal (int) or sleep goal (float hours)
+unit:  'steps' | 'hours'   // controls label formatting
+color: string   // HC_COLOR = '#33ace5'
+```
+
+Data is computed in the screen's `useMemo` by summing raw storage rows and dividing:
+```ts
+sums[dow]   += row.steps;   // or row.sleepHours
+counts[dow] += 1;
+avgValue = counts[i] > 0 ? sums[i] / counts[i] : 0;
+```
 
 ### Styling rules
 

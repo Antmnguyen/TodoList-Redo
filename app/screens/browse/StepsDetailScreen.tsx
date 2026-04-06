@@ -13,7 +13,7 @@
 //   4. Chart — WeekBarGraph (week) or MonthCalendarGraph (month)
 //   5. Stats row — week avg, month avg, personal best
 //   6. Streak card
-//   7. Day-of-week pattern — DayOfWeekPatternCard (all-time goal-met rate by weekday)
+//   7. Day-of-week pattern — HealthDayOfWeekCard (avg steps / % of goal by weekday)
 //   8. Task mappings — existing mapping rows + "Add Task Mapping" button
 //
 // ── Data flow ────────────────────────────────────────────────────────────────

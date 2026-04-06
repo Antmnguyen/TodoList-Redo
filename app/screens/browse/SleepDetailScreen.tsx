@@ -14,7 +14,7 @@
 //   4. Chart — WeekBarGraph (week) or MonthCalendarGraph (month)
 //   5. Stats row — week avg, month avg, best night
 //   6. Streak card
-//   7. Day-of-week pattern — DayOfWeekPatternCard (all-time goal-met rate by weekday)
+//   7. Day-of-week pattern — HealthDayOfWeekCard (avg sleep hours / % of goal by weekday)
 //   8. Task mappings section + "Add Task Mapping" button
 //
 // ── Sleep record semantics ────────────────────────────────────────────────────
@@ -282,26 +282,32 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
   const ringColor = colorEnabled && lastNightHours >= sleepGoal ? GOAL_MET_COLOR : HC_COLOR;
 
   /**
-   * All-time sleep-goal completion pattern aggregated by weekday (Mon–Sun).
+   * Average sleep hours by weekday (Mon–Sun) across all stored history.
    *
-   * count = nights this weekday had sleepHours ≥ sleepGoal
-   * total = total nights recorded for this weekday in all history
+   * avgValue = mean sleep hours for that weekday across every recorded night.
+   * count    = number of recorded nights for that weekday.
    *
-   * DayOfWeekPatternCard % mode answers: "On which night of the week do I
-   * most consistently meet my sleep goal?" — useful for spotting weeknight
-   * vs weekend sleep pattern differences.
+   * HealthDayOfWeekCard uses these to:
+   *   Avg mode → bar height and label show the average hours for that weekday
+   *   % mode   → bar height and label show avgValue ÷ sleepGoal as a percentage
+   *
+   * Uses allRows (full history) so the average improves as sync data accumulates.
    */
-  const dayOfWeekData: DayOfWeekData[] = useMemo(() => {
+  const dayOfWeekData: HealthDayOfWeekData[] = useMemo(() => {
     const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const sums   = [0, 0, 0, 0, 0, 0, 0];
     const counts = [0, 0, 0, 0, 0, 0, 0];
-    const totals = [0, 0, 0, 0, 0, 0, 0];
     for (const row of allRows) {
       const dow = getDayOfWeek(row.date);
-      totals[dow]++;
-      if (row.sleepHours >= sleepGoal) counts[dow]++;
+      sums[dow]   += row.sleepHours;
+      counts[dow] += 1;
     }
-    return DAY_LABELS.map((day, i) => ({ day, count: counts[i], total: totals[i] }));
-  }, [allRows, sleepGoal]);
+    return DAY_LABELS.map((day, i) => ({
+      day,
+      avgValue: counts[i] > 0 ? sums[i] / counts[i] : 0,
+      count: counts[i],
+    }));
+  }, [allRows]);
 
   // ── Goal edit handlers ─────────────────────────────────────────────────────
 
@@ -506,11 +512,16 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
             weekend patterns (e.g. "I always hit my goal on Fridays/Saturdays
             but consistently fall short on Sunday nights").
 
-            Reuses DayOfWeekPatternCard from the task stats screens — same
-            component, different data. count = nights goal was met; total =
-            total nights recorded for that weekday across all available history.
+            Shows average sleep hours for each weekday (Avg mode) or as a
+            percentage of the sleep goal (% mode). Uses all stored history
+            so the pattern improves as more sync data accumulates.
         */}
-        <DayOfWeekPatternCard data={dayOfWeekData} color={HC_COLOR} />
+        <HealthDayOfWeekCard
+          data={dayOfWeekData}
+          goal={sleepGoal}
+          unit="hours"
+          color={HC_COLOR}
+        />
 
         {/* ── Task mappings ─────────────────────────────────────────────────── */}
         <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>
