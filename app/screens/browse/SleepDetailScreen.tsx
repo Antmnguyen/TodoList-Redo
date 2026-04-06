@@ -14,7 +14,8 @@
 //   4. Chart — WeekBarGraph (week) or MonthCalendarGraph (month)
 //   5. Stats row — week avg, month avg, best night
 //   6. Streak card
-//   7. Task mappings section + "Add Task Mapping" button
+//   7. Day-of-week pattern — DayOfWeekPatternCard (all-time goal-met rate by weekday)
+//   8. Task mappings section + "Add Task Mapping" button
 //
 // ── Sleep record semantics ────────────────────────────────────────────────────
 //
@@ -70,6 +71,7 @@ import { CircularProgress } from '../../components/stats/CircularProgress';
 import { WeekBarGraph } from '../../components/stats/detail/shared/WeekBarGraph';
 import { MonthCalendarGraph, CalendarDayData } from '../../components/stats/detail/shared/MonthCalendarGraph';
 import { StreakCard } from '../../components/stats/detail/shared/StreakCard';
+import { HealthDayOfWeekCard, HealthDayOfWeekData } from '../../components/stats/detail/shared/HealthDayOfWeekCard';
 import { DayData } from '../../components/stats/WeeklyMiniChart';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
@@ -173,6 +175,8 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
   // Sleep rows are indexed by morning date; lastNightHours = today's row's sleepHours.
   const [weekRows, setWeekRows] = useState<SleepDayRecord[]>([]);
   const [monthRows, setMonthRows] = useState<SleepDayRecord[]>([]);
+  // allRows covers the full stored sleep history — used for DayOfWeekPatternCard.
+  const [allRows, setAllRows] = useState<SleepDayRecord[]>([]);
   const [lastNightHours, setLastNightHours] = useState(0);
   const [personalBest, setPersonalBest] = useState<SleepDayRecord | null>(null);
 
@@ -215,6 +219,9 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
 
     setWeekRows(getSleepInRange(weekStart, today));
     setMonthRows(getSleepInRange(monthStart, today));
+
+    // Full history query for DayOfWeekPatternCard
+    setAllRows(getSleepInRange('2000-01-01', today));
 
     setPersonalBest(getSleepPersonalBest());
 
@@ -273,6 +280,28 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
 
   // Green when goal met + toggle on; brand colour otherwise
   const ringColor = colorEnabled && lastNightHours >= sleepGoal ? GOAL_MET_COLOR : HC_COLOR;
+
+  /**
+   * All-time sleep-goal completion pattern aggregated by weekday (Mon–Sun).
+   *
+   * count = nights this weekday had sleepHours ≥ sleepGoal
+   * total = total nights recorded for this weekday in all history
+   *
+   * DayOfWeekPatternCard % mode answers: "On which night of the week do I
+   * most consistently meet my sleep goal?" — useful for spotting weeknight
+   * vs weekend sleep pattern differences.
+   */
+  const dayOfWeekData: DayOfWeekData[] = useMemo(() => {
+    const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    const totals = [0, 0, 0, 0, 0, 0, 0];
+    for (const row of allRows) {
+      const dow = getDayOfWeek(row.date);
+      totals[dow]++;
+      if (row.sleepHours >= sleepGoal) counts[dow]++;
+    }
+    return DAY_LABELS.map((day, i) => ({ day, count: counts[i], total: totals[i] }));
+  }, [allRows, sleepGoal]);
 
   // ── Goal edit handlers ─────────────────────────────────────────────────────
 
@@ -470,6 +499,18 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
           bestStreak={monthStats.bestStreak}
           color={HC_COLOR}
         />
+
+        {/* ── Day-of-week pattern ───────────────────────────────────────────────
+            Reveals which nights of the week the user most consistently meets
+            their sleep goal. Particularly useful for spotting weeknight vs
+            weekend patterns (e.g. "I always hit my goal on Fridays/Saturdays
+            but consistently fall short on Sunday nights").
+
+            Reuses DayOfWeekPatternCard from the task stats screens — same
+            component, different data. count = nights goal was met; total =
+            total nights recorded for that weekday across all available history.
+        */}
+        <DayOfWeekPatternCard data={dayOfWeekData} color={HC_COLOR} />
 
         {/* ── Task mappings ─────────────────────────────────────────────────── */}
         <Text style={[styles.sectionHeader, { color: theme.textTertiary }]}>

@@ -13,7 +13,8 @@
 //   4. Chart — WeekBarGraph (week) or MonthCalendarGraph (month)
 //   5. Stats row — week avg, month avg, personal best
 //   6. Streak card
-//   7. Task mappings — existing mapping rows + "Add Task Mapping" button
+//   7. Day-of-week pattern — DayOfWeekPatternCard (all-time goal-met rate by weekday)
+//   8. Task mappings — existing mapping rows + "Add Task Mapping" button
 //
 // ── Data flow ────────────────────────────────────────────────────────────────
 //
@@ -80,6 +81,7 @@ import { CircularProgress } from '../../components/stats/CircularProgress';
 import { WeekBarGraph } from '../../components/stats/detail/shared/WeekBarGraph';
 import { MonthCalendarGraph, CalendarDayData } from '../../components/stats/detail/shared/MonthCalendarGraph';
 import { StreakCard } from '../../components/stats/detail/shared/StreakCard';
+import { HealthDayOfWeekCard, HealthDayOfWeekData } from '../../components/stats/detail/shared/HealthDayOfWeekCard';
 import { DayData } from '../../components/stats/WeeklyMiniChart';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
@@ -192,6 +194,10 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
   // ── Data state ─────────────────────────────────────────────────────────────
   const [weekRows, setWeekRows] = useState<StepsDayRecord[]>([]);
   const [monthRows, setMonthRows] = useState<StepsDayRecord[]>([]);
+  // allRows covers the entire stored history (from earliest synced date to today).
+  // Used for DayOfWeekPatternCard so the pattern accumulates over time rather than
+  // only reflecting the current month window.
+  const [allRows, setAllRows] = useState<StepsDayRecord[]>([]);
   const [todaySteps, setTodaySteps] = useState(0);
   const [personalBest, setPersonalBest] = useState<StepsDayRecord | null>(null);
 
@@ -243,6 +249,10 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
     // Full date-range queries for chart and stat computation
     setWeekRows(getStepsInRange(weekStart, today));
     setMonthRows(getStepsInRange(monthStart, today));
+
+    // Full history query for DayOfWeekPatternCard — '2000-01-01' acts as an
+    // "all available data" sentinel; the DB returns only rows that actually exist.
+    setAllRows(getStepsInRange('2000-01-01', today));
 
     // All-time best (MAX query across the whole table, not limited to current range)
     setPersonalBest(getStepsPersonalBest());
@@ -309,6 +319,35 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
 
   // Ring accent colour — green when goal met + colour toggle on; brand blue otherwise
   const ringColor = colorEnabled && todaySteps >= stepsGoal ? GOAL_MET_COLOR : HC_COLOR;
+
+  /**
+   * Average steps by weekday (Mon–Sun) across all stored history.
+   *
+   * avgValue = mean step count for that weekday across every recorded occurrence.
+   * count    = number of recorded days for that weekday (used to compute the avg
+   *            and shown implicitly through bar height).
+   *
+   * HealthDayOfWeekCard uses these to:
+   *   Avg mode → bar height and label show the average steps for that weekday
+   *   % mode   → bar height and label show avgValue ÷ stepsGoal as a percentage
+   *
+   * Uses allRows (full history) so the average improves as sync data accumulates.
+   */
+  const dayOfWeekData: HealthDayOfWeekData[] = useMemo(() => {
+    const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const sums   = [0, 0, 0, 0, 0, 0, 0];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    for (const row of allRows) {
+      const dow = getDayOfWeek(row.date);
+      sums[dow]   += row.steps;
+      counts[dow] += 1;
+    }
+    return DAY_LABELS.map((day, i) => ({
+      day,
+      avgValue: counts[i] > 0 ? sums[i] / counts[i] : 0,
+      count: counts[i],
+    }));
+  }, [allRows]);
 
   // ==========================================================================
   // GOAL EDIT HANDLERS
@@ -524,6 +563,24 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
         <StreakCard
           currentStreak={monthStats.currentStreak}
           bestStreak={monthStats.bestStreak}
+          color={HC_COLOR}
+        />
+
+        {/* ── Day-of-week pattern ───────────────────────────────────────────────
+            Aggregates all stored step history by weekday to reveal when the user
+            tends to hit their goal most consistently. Reuses the same
+            DayOfWeekPatternCard component used in the task stats screens.
+
+            Count mode → raw "met goal" tally per weekday
+            % mode     → goal-met rate per weekday (count ÷ total appearances)
+
+            Data comes from allRows (full history) not just monthRows, so the
+            pattern improves in accuracy as more sync data accumulates over time.
+        */}
+        <HealthDayOfWeekCard
+          data={dayOfWeekData}
+          goal={stepsGoal}
+          unit="steps"
           color={HC_COLOR}
         />
 

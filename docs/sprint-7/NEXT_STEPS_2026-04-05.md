@@ -9,8 +9,8 @@ this document.
 
 **Quick summary of what was done in the 2026-04-05/06 session:**
 - `healthConnectUtils.ts` — `computeStepsStats()` (S8) + `computeSleepStats()` (S9)
-- `StepsDetailScreen.tsx` (U4) — ring, goals, charts, stats, mapping rows
-- `SleepDetailScreen.tsx` (U5) — ring, goals, charts, stats, mapping rows
+- `StepsDetailScreen.tsx` (U4) — ring, goals, charts, stats, mapping rows, DayOfWeekPatternCard
+- `SleepDetailScreen.tsx` (U5) — ring, goals, charts, stats, mapping rows, DayOfWeekPatternCard
 - `WorkoutsDetailScreen.tsx` (U6) — today's sessions list, mapping rows
 - `HealthMappingEditor.tsx` (U7) — template picker, threshold fields, exercise picker
 - `HealthManagementScreen.tsx` — stub detail screens replaced with real imports
@@ -20,6 +20,12 @@ this document.
 - `index.ts` — BackgroundFetch configure + registerHeadlessTask (S15)
 - **React hooks violation fixed** in `WorkoutsDetailScreen.tsx` — `if (showEditor)`
   early return was moved to after all hook declarations (Rules of Hooks compliance)
+- **React hooks violation fixed** in `HealthManagementScreen.tsx` — sub-screen early
+  returns moved after all hub state hooks (was crashing when opening any detail screen)
+- **DayOfWeekPatternCard added** to `StepsDetailScreen` and `SleepDetailScreen` —
+  shows all-time goal-met count/rate by weekday; reuses existing component from
+  `app/components/stats/detail/shared/DayOfWeekPatternCard.tsx`. Data uses full
+  history query (`'2000-01-01'` → today) so pattern improves as sync data accumulates.
 
 ---
 
@@ -113,7 +119,7 @@ Same streak pattern as steps — filter `sleepHours >= goalHours`, pass dates to
 
 **Where:** `app/screens/browse/StepsDetailScreen.tsx` — extracted from stub and
 imported into `HealthManagementScreen.tsx`. All hooks declared before early return
-(Rules of Hooks compliant).
+(Rules of Hooks compliant). Includes `DayOfWeekPatternCard` (section 7).
 
 **Props:** `{ onBack: () => void }`
 
@@ -227,7 +233,7 @@ in 'steps' mode. "+ Add Task Mapping" opens editor in create mode.
 
 ## U5 — `SleepDetailScreen` ✅ DONE
 
-**Where:** `app/screens/browse/SleepDetailScreen.tsx`
+**Where:** `app/screens/browse/SleepDetailScreen.tsx` — includes `DayOfWeekPatternCard` (section 7).
 
 **Props:** `{ onBack: () => void }`
 

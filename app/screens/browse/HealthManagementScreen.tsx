@@ -101,23 +101,24 @@ import { WorkoutsDetailScreen } from './WorkoutsDetailScreen';
 export const HealthManagementScreen: React.FC<HealthManagementScreenProps> = ({
   onBack,
 }) => {
+  // ==========================================================================
+  // ALL HOOKS — must be declared before any conditional return
+  // ==========================================================================
+  //
+  // React requires every hook to be called on every render in the same order.
+  // The sub-screen early returns below (if subScreen === 'steps' etc.) must
+  // come AFTER all hook declarations — otherwise switching to a sub-screen
+  // would skip the hub-state hooks and trigger "Rendered fewer hooks than
+  // expected".
+
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // ── Sub-screen routing ────────────────────────────────────────────────────
   const [subScreen, setSubScreen] = useState<SubScreen>('none');
 
-  if (subScreen === 'steps') {
-    return <StepsDetailScreen onBack={() => setSubScreen('none')} />;
-  }
-  if (subScreen === 'sleep') {
-    return <SleepDetailScreen onBack={() => setSubScreen('none')} />;
-  }
-  if (subScreen === 'workouts') {
-    return <WorkoutsDetailScreen onBack={() => setSubScreen('none')} />;
-  }
-
   // ── Hub state ─────────────────────────────────────────────────────────────
+  // Declared unconditionally even though they're only used when subScreen === 'none'.
   const [status, setStatus] = useState<HealthConnectStatus>(HealthConnectStatus.Unknown);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [todaySteps, setTodaySteps] = useState<number | null>(null);
@@ -137,9 +138,28 @@ export const HealthManagementScreen: React.FC<HealthManagementScreenProps> = ({
     setTodaySleep(sleepRows.length > 0 ? sleepRows[0].sleepHours : null);
   }, []);
 
+  // Skip the hub data fetch when a sub-screen is active — it's wasted work
+  // since none of this state is consumed while a detail screen is showing.
+  // When the user navigates back (subScreen → 'none'), loadData runs again
+  // via the dependency change, so the hub is always fresh on return.
   useEffect(() => {
+    if (subScreen !== 'none') return;
     loadData();
-  }, [loadData]);
+  }, [loadData, subScreen]);
+
+  // ==========================================================================
+  // CONDITIONAL RENDER — sub-screens (after all hooks)
+  // ==========================================================================
+
+  if (subScreen === 'steps') {
+    return <StepsDetailScreen onBack={() => setSubScreen('none')} />;
+  }
+  if (subScreen === 'sleep') {
+    return <SleepDetailScreen onBack={() => setSubScreen('none')} />;
+  }
+  if (subScreen === 'workouts') {
+    return <WorkoutsDetailScreen onBack={() => setSubScreen('none')} />;
+  }
 
   const handleSync = async () => {
     setSyncing(true);
