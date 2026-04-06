@@ -107,6 +107,20 @@ import {
   startOfCurrentMonth,
 } from '../../core/utils/statsCalculations';
 
+// =============================================================================
+// MODULE-LEVEL HELPERS
+// =============================================================================
+
+/**
+ * Add `n` days to a 'YYYY-MM-DD' string and return a new 'YYYY-MM-DD'.
+ * Constructs via parts (not new Date(str)) to avoid UTC timezone shifts.
+ */
+function addDays(dateStr: string, n: number): string {
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const result = new Date(y, mo - 1, d + n);
+  return toLocalDateString(result);
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 import { HealthConnectMapping } from '../../features/googleFit/types/healthConnect';
 
@@ -190,6 +204,12 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
 
   // ── Chart mode ─────────────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState<StepsTimeRange>('week');
+
+  // ── Selected week for WeekBarGraph navigation ──────────────────────────────
+  // Initialised to the current week's Monday. Updated when the user taps ‹ › in
+  // WeekBarGraph. Only affects the bar chart — stats row + streak always use the
+  // current calendar week regardless of which week is being browsed.
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => startOfCurrentWeek());
 
   // ── Data state ─────────────────────────────────────────────────────────────
   const [weekRows, setWeekRows] = useState<StepsDayRecord[]>([]);
@@ -284,15 +304,23 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
    * DayData for WeekBarGraph (Mon=0 … Sun=6, 7 items).
    * count = actual steps; total = goal (enables % mode to mean "% of goal").
    * Days with no row in the DB default to 0 steps.
+   *
+   * Uses selectedWeekStart so the chart updates when the user navigates weeks.
+   * Re-queries SQLite synchronously — fast enough to run in useMemo.
    */
+  const selectedWeekRows = useMemo(
+    () => getStepsInRange(selectedWeekStart, addDays(selectedWeekStart, 6)),
+    [selectedWeekStart],
+  );
+
   const barData: DayData[] = useMemo(
     () =>
       ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => ({
         day,
-        count: weekRows.find(r => getDayOfWeek(r.date) === i)?.steps ?? 0,
+        count: selectedWeekRows.find(r => getDayOfWeek(r.date) === i)?.steps ?? 0,
         total: stepsGoal,
       })),
-    [weekRows, stepsGoal],
+    [selectedWeekRows, stepsGoal],
   );
 
   /**
@@ -519,7 +547,11 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
             data for the initial display.
         */}
         {timeRange === 'week' ? (
-          <WeekBarGraph data={barData} color={HC_COLOR} />
+          <WeekBarGraph
+            data={barData}
+            color={HC_COLOR}
+            onWeekChange={(monday) => setSelectedWeekStart(toLocalDateString(monday))}
+          />
         ) : (
           <MonthCalendarGraph
             year={now.getFullYear()}

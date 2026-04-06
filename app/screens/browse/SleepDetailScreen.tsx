@@ -100,6 +100,15 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 import { HealthConnectMapping } from '../../features/googleFit/types/healthConnect';
 
+// =============================================================================
+// MODULE-LEVEL HELPERS
+// =============================================================================
+
+function addDays(dateStr: string, n: number): string {
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  return toLocalDateString(new Date(y, mo - 1, d + n));
+}
+
 // ── Mapping editor sub-screen ─────────────────────────────────────────────────
 import { HealthMappingEditor } from './HealthMappingEditor';
 
@@ -170,6 +179,9 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
 
   // ── Chart mode ─────────────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState<SleepTimeRange>('week');
+
+  // ── Selected week for WeekBarGraph navigation ──────────────────────────────
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => startOfCurrentWeek());
 
   // ── Data state ─────────────────────────────────────────────────────────────
   // Sleep rows are indexed by morning date; lastNightHours = today's row's sleepHours.
@@ -245,15 +257,22 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
    * DayData for WeekBarGraph.
    * count = sleepHours (float). WeekBarGraph renders proportional heights,
    * so floats work naturally — 7.5h renders 93.75% of the goal-height bar.
+   *
+   * Uses selectedWeekStart so the chart updates when the user navigates weeks.
    */
+  const selectedWeekRows = useMemo(
+    () => getSleepInRange(selectedWeekStart, addDays(selectedWeekStart, 6)),
+    [selectedWeekStart],
+  );
+
   const barData: DayData[] = useMemo(
     () =>
       ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => ({
         day,
-        count: weekRows.find(r => getDayOfWeek(r.date) === i)?.sleepHours ?? 0,
+        count: selectedWeekRows.find(r => getDayOfWeek(r.date) === i)?.sleepHours ?? 0,
         total: sleepGoal,
       })),
-    [weekRows, sleepGoal],
+    [selectedWeekRows, sleepGoal],
   );
 
   /**
@@ -462,7 +481,11 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
             MonthCalendarGraph uses ×10 encoded values (see calData comment above).
         */}
         {timeRange === 'week' ? (
-          <WeekBarGraph data={barData} color={HC_COLOR} />
+          <WeekBarGraph
+            data={barData}
+            color={HC_COLOR}
+            onWeekChange={(monday) => setSelectedWeekStart(toLocalDateString(monday))}
+          />
         ) : (
           <MonthCalendarGraph
             year={now.getFullYear()}

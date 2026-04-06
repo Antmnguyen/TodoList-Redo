@@ -54,87 +54,25 @@ synced. Run them in order — earlier tests cover the plumbing that later tests 
 
 ---
 
-## Bug 1 — Task mappings show `permanentId` instead of task name
+## ~~Bug 1 — Task mappings show `permanentId` instead of task name~~ ✅ FIXED
 
-**Screens affected:** `StepsDetailScreen`, `SleepDetailScreen`, `WorkoutsDetailScreen`
-
-**Symptom:** The mapping rows under "TASK MAPPINGS" display a raw ID string (e.g.
-`perm_1712345678_ab3f`) instead of the human-readable template title (e.g. "Evening Run").
-
-**Root cause:** `getAllMappings()` in `healthConnectStorage.ts` JOINs `templates` only to
-filter orphaned rows — it does not SELECT the template title. The `HealthConnectMapping` type
-has no `templateTitle` field, so the row component falls back to rendering `mapping.permanentId`.
-
-**Fix:**
-
-1. Add `templateTitle?: string` to `HealthConnectMapping` in
-   `app/features/googleFit/types/healthConnect.ts`.
-
-2. Update `getAllMappings()` (and `getAllEnabledMappings()`) in `healthConnectStorage.ts` to
-   also select the title:
-   ```sql
-   SELECT m.*, tmpl.templateTitle
-   FROM health_connect_mappings m
-   INNER JOIN templates tmpl ON tmpl.permanentId = m.permanentId
-   ```
-
-3. Update `rowToMapping()` in `healthConnectStorage.ts` to populate `templateTitle` from the
-   joined row (the raw row shape already has it from the SELECT).
-
-4. In `MappingRow` inside each detail screen, display `mapping.templateTitle ?? mapping.permanentId`
-   as the primary label so there is a graceful fallback while the fix propagates.
+**Fix applied 2026-04-06:**
+- `templateTitle?: string` added to `HealthConnectMapping` (`healthConnect.ts`)
+- `getAllMappings()` and `getAllEnabledMappings()` now `SELECT m.*, t.templateTitle` (`healthConnectStorage.ts`)
+- `rowToMapping()` populates the field (`healthConnectStorage.ts`)
+- `MappingRow` in all three detail screens renders `mapping.templateTitle ?? mapping.permanentId`
 
 ---
 
-## Bug 2 — Week navigation changes the label but not the chart data
+## ~~Bug 2 — Week navigation changes the label but not the chart data~~ ✅ FIXED
 
-**Screens affected:** `StepsDetailScreen`, `SleepDetailScreen`
-
-**Symptom:** Tapping the `‹` arrow in `WeekBarGraph` moves the week label back one week but
-the 7 bars remain identical — they still show this week's data.
-
-**Root cause:** `WeekBarGraph` manages its own `weekStart` state and fires `onWeekChange` when
-the user navigates, but the detail screens do not wire up `onWeekChange`. Both screens build
-`barData` once in a `useMemo` from `weekRows` (always this calendar week) and pass it as the
-`data` prop. The component always renders `const displayData = data` regardless of which week is
-selected internally — it has no way to swap data on its own.
-
-**Fix:**
-
-In `StepsDetailScreen` (and `SleepDetailScreen`):
-
-1. Add a `selectedWeekStart` state, initialised to `startOfCurrentWeek()`.
-
-2. Pass `onWeekChange` to `WeekBarGraph`:
-   ```tsx
-   <WeekBarGraph
-     data={barData}
-     color={HC_COLOR}
-     onWeekChange={(monday) => setSelectedWeekStart(toLocalDateString(monday))}
-   />
-   ```
-
-3. Make `barData` depend on `selectedWeekStart` instead of the fixed `weekRows`:
-   ```ts
-   const selectedWeekRows = useMemo(
-     () => getStepsInRange(selectedWeekStart, endOfWeek(selectedWeekStart)),
-     [selectedWeekStart]
-   );
-   const barData = useMemo(
-     () => ['M','T','W','T','F','S','S'].map((day, i) => ({
-       day,
-       count: selectedWeekRows.find(r => getDayOfWeek(r.date) === i)?.steps ?? 0,
-       total: stepsGoal,
-     })),
-     [selectedWeekRows, stepsGoal]
-   );
-   ```
-
-4. Add an `endOfWeek(mondayDateStr)` helper (adds 6 days to the Monday date string) in the
-   screen file or in `statsCalculations.ts`.
-
-Note: `weekRows` (this calendar week) can stay for the stats row — week avg and streak should
-always reflect the current week, not the browsed week.
+**Fix applied 2026-04-06:**
+- `selectedWeekStart: string` state added to both screens (init: `startOfCurrentWeek()`)
+- `selectedWeekRows` derived via `useMemo` — calls `getStepsInRange` / `getSleepInRange` for `selectedWeekStart → selectedWeekStart+6d`
+- `barData` now depends on `selectedWeekRows` instead of the always-current `weekRows`
+- `onWeekChange={(monday) => setSelectedWeekStart(toLocalDateString(monday))}` wired into `WeekBarGraph` in both screens
+- `addDays(dateStr, n)` module-level helper added to each screen file (constructs via date parts, no UTC shift)
+- `weekRows` (current calendar week) retained for the stats row and streak card — those always show the current week regardless of which week is being browsed
 
 ---
 
