@@ -28,6 +28,7 @@ import { HealthConnectMapping } from '../../../features/googleFit/types/healthCo
 interface MappingRow {
   id: string;
   permanentId: string;
+  templateTitle: string | null;
   dataType: string;
   stepsGoal: number | null;
   sleepHours: number | null;
@@ -82,7 +83,7 @@ export function deleteMapping(id: string): void {
  */
 export function getAllEnabledMappings(): HealthConnectMapping[] {
   const rows = db.getAllSync<MappingRow>(
-    `SELECT m.*
+    `SELECT m.*, t.templateTitle
      FROM health_connect_mappings m
      INNER JOIN templates t ON t.permanentId = m.permanentId
      WHERE m.enabled = 1`
@@ -96,7 +97,7 @@ export function getAllEnabledMappings(): HealthConnectMapping[] {
  */
 export function getAllMappings(): HealthConnectMapping[] {
   const rows = db.getAllSync<MappingRow>(
-    `SELECT m.*
+    `SELECT m.*, t.templateTitle
      FROM health_connect_mappings m
      INNER JOIN templates t ON t.permanentId = m.permanentId`
   );
@@ -293,6 +294,7 @@ function rowToMapping(row: MappingRow): HealthConnectMapping {
   return {
     id: row.id,
     permanentId: row.permanentId,
+    templateTitle: row.templateTitle ?? undefined,
     dataType: row.dataType as HealthConnectMapping['dataType'],
     stepsGoal: row.stepsGoal ?? undefined,
     sleepHours: row.sleepHours ?? undefined,

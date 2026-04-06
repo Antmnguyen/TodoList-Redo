@@ -33,6 +33,7 @@ export const ExerciseTypeMap: Record<string, ExerciseTypeValue> = {
 export interface HealthConnectMapping {
   id: string;                        // UUID primary key
   permanentId: string;               // references templates.permanentId
+  templateTitle?: string;            // populated by getAllMappings() JOIN — display name
   dataType: HealthDataType;
   // Steps threshold: minimum step count
   stepsGoal?: number;

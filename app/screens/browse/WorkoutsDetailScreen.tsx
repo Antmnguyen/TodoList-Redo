@@ -341,7 +341,7 @@ const MappingRow: React.FC<MappingRowProps> = ({
       <TouchableOpacity style={mappingRowStyles.row} onPress={onPress} activeOpacity={0.7}>
         <View style={{ flex: 1 }}>
           <Text style={[mappingRowStyles.title, { color: theme.textPrimary }]}>
-            {mapping.permanentId}
+            {mapping.templateTitle ?? mapping.permanentId}
           </Text>
           <Text style={[mappingRowStyles.sub, { color: theme.textSecondary }]}>
             {typeLabel}{durationStr ? `  ·  ${durationStr}` : ''}
