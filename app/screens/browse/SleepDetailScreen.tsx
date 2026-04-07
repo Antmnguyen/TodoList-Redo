@@ -265,18 +265,21 @@ export const SleepDetailScreen: React.FC<SleepDetailScreenProps> = ({ onBack }) 
     [selectedWeekStart],
   );
 
-  // count snapped to sleepGoal / 0 so % toggle shows binary 100% / 0%.
+  // count = actual hours so Count mode shows real values and bars scale to the
+  // best night. total = sleepGoal so % mode shows actual/goal %, capped at 100.
+  // barColor turns green on goal-met nights when the colour toggle is on.
   const barData: DayData[] = useMemo(
     () =>
       ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
         const actual = selectedWeekRows.find(r => getDayOfWeek(r.date) === i)?.sleepHours ?? 0;
         return {
           day,
-          count: actual >= sleepGoal ? sleepGoal : 0,
+          count: actual,
           total: sleepGoal,
+          barColor: colorEnabled && actual >= sleepGoal ? GOAL_MET_COLOR : undefined,
         };
       }),
-    [selectedWeekRows, sleepGoal],
+    [selectedWeekRows, sleepGoal, colorEnabled],
   );
 
   /**

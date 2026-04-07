@@ -85,12 +85,33 @@ synced. Run them in order — earlier tests cover the plumbing that later tests 
 
 ---
 
-## ~~Bug 4 — WeekBarGraph `%` mode shows partial percentage for health data (should be 100% or 0%)~~ ✅ FIXED
+## ~~Bug 4 — WeekBarGraph bars and % mode for health data~~ ✅ FIXED (revised)
 
-**Fix applied 2026-04-06:**
-- `barData` in both `StepsDetailScreen` and `SleepDetailScreen` now snaps `count` to `goal` (when met) or `0` (when not met)
-- `safePct(goal, goal) = 100%`, `safePct(0, goal) = 0%` — WeekBarGraph unchanged
-- Bar height in Count mode is full or absent, which correctly visualises a binary daily goal
+**Original symptom:** % mode showed partial percentages (e.g. 84%) instead of meaningful health goal feedback.
+
+**First attempt (reverted):** Snapped `count` to `goal` or `0` — produced binary 100%/0% but broke Count mode (bars showed goal value instead of real steps, full or empty only).
+
+**Final fix applied 2026-04-06:**
+
+`DayData` (`WeeklyMiniChart.tsx`):
+- Added `barColor?: string` — optional per-bar color override. Existing callers pass nothing and are unaffected; `WeekBarGraph` falls back to the graph-level `color` prop when absent.
+
+`WeekBarGraph.tsx` (`BarColumn`):
+- Bar background: `item.barColor ?? color`
+- Value label color: same fallback
+- % bar height capped at `BAR_MAX_HEIGHT` (prevents overflow when `count > total`)
+- % label capped: `Math.min(safePct(count, total), 100)%`
+
+`StepsDetailScreen` + `SleepDetailScreen` (`barData`):
+- `count` = actual steps/hours — Count mode shows real values, bars scale to busiest day
+- `total` = goal — % mode shows `actual ÷ goal`, capped at 100%
+- `barColor` = `GOAL_MET_COLOR` (`'#34C759'`) when goal met + colour toggle on; `undefined` otherwise (falls back to `HC_COLOR`)
+
+**⚠️ Regression check required:** `barColor` was added to the shared `DayData` type used by all stat screens (`OverallDetailScreen`, `CategoryDetailScreen`, `PermanentDetailScreen`). Those screens do not set `barColor`, so `WeekBarGraph` falls back to `color` as before — but this must be verified on device:
+- [ ] Overall stats week bar graph — bars still colour correctly
+- [ ] Category detail week bar graph — bars still colour correctly
+- [ ] Permanent task detail week bar graph — bars still colour correctly
+- [ ] Stacked-segment bars (permanent + one-off split) — still render correctly (code path unchanged, `barColor` only applies to the solid-bar branch)
 
 ---
 

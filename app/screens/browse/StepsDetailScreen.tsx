@@ -313,21 +313,22 @@ export const StepsDetailScreen: React.FC<StepsDetailScreenProps> = ({ onBack }) 
     [selectedWeekStart],
   );
 
-  // count is snapped to stepsGoal (goal met) or 0 (goal not met) so that the
-  // WeekBarGraph % toggle shows binary 100% / 0% rather than partial percentages.
-  // Bar height in Count mode reflects met/not-met at full or zero height, which
-  // is the correct visual for a binary daily goal.
+  // count = actual steps so Count mode labels show real values and bars scale
+  // to the busiest day. total = stepsGoal so % mode shows actual/goal %, capped
+  // at 100 by WeekBarGraph. barColor turns green on goal-met days when the colour
+  // toggle is on; omitted otherwise so WeekBarGraph falls back to HC_COLOR.
   const barData: DayData[] = useMemo(
     () =>
       ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
         const actual = selectedWeekRows.find(r => getDayOfWeek(r.date) === i)?.steps ?? 0;
         return {
           day,
-          count: actual >= stepsGoal ? stepsGoal : 0,
+          count: actual,
           total: stepsGoal,
+          barColor: colorEnabled && actual >= stepsGoal ? GOAL_MET_COLOR : undefined,
         };
       }),
-    [selectedWeekRows, stepsGoal],
+    [selectedWeekRows, stepsGoal, colorEnabled],
   );
 
   /**

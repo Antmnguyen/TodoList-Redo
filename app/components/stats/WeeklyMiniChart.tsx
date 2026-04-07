@@ -36,6 +36,8 @@ export interface DayData {
   total?: number; // tasks scheduled that day — optional; used by WeekBarGraph for
                   // true per-day completion rate in % mode. WeeklyMiniChart ignores it.
   segments?: DataSegment[];  // optional — absent = solid bar (no change to existing callers)
+  barColor?: string; // optional per-bar color override — used by health screens to
+                     // highlight goal-met days. Falls back to the graph's color prop.
 }
 
 interface WeeklyMiniChartProps {
