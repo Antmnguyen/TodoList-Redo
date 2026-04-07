@@ -29,7 +29,25 @@ The app uses a relational SQLite database to turn task history into visual metri
 * **Immutable Completion Logs:** Every time a task is completed or failed, it is recorded in a permanent log. This serves as the source of truth for all historical data.
 * **Data Visualization:** The app pulls from the log to generate calendar heatmaps and bar charts, showing exactly when tasks were finished and where gaps in consistency occur.
 * **Visual Identification:** Task cards use a dual-strip indicator system—color-coded by category and recurrence frequency—so you can distinguish between different types of work at a glance.
+* 
+### 3. Health Connect Integration (v1.1.0)
+Seamlessly bridge the gap between physical health and productivity by mapping biometric data to automated task completion.
+* **Biometric Syncing:** Reads Steps, Sleep, and Workouts directly from Android's Health Connect API.
+* **Threshold Mappings:** Automatically complete tasks (e.g., "Walk 10k steps") when Health Connect data hits a user-defined threshold.
+* **Health connect Data** Easily view your past step sleep and workout data in the health connect section in browse.
 
+**Architecture Overview:**
+```text
+Physical Device (Health Connect) ──► healthConnectActions.ts (Sync Engine)
+                                          │
+                ┌─────────────────────────┴─────────────────────────┐
+                ▼                                                   ▼
+      healthConnectStorage.ts                             healthConnectUtils.ts
+      (SQLite history & goals)                            (Stats & Streaks logic)
+                │                                                   │
+                └─────────────────────────┬─────────────────────────┘
+                                          ▼
+                               UI Screens & Task Layer
 ---
 
 ## Technical Stack
@@ -47,9 +65,9 @@ The app uses a relational SQLite database to turn task history into visual metri
 | **Permanent Task Engine** | Completed |
 | **SQLite Archival System** | Completed |
 | **Productivity Visualization** | Completed |
+| **Health Connect Integration** | Completed (v1.1.0) |
 | **Location Geofencing** | In Progress |
 | **Google Calendar Sync** | Planned |
-| **Health Connect Integration** | Planned |
 
 ---
 
