@@ -1,6 +1,6 @@
 // app/core/hooks/useTasks.ts
 import { useState, useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, DeviceEventEmitter } from 'react-native';
 import { Task } from '../types/task';
 import { getAllTasks } from '../services/storage/taskStorage';
 import {
@@ -28,6 +28,16 @@ export function useTasks() {
   // The job is guarded to run at most once per calendar day.
   useEffect(() => {
     runMidnightJob().then(loadTasks);
+  }, []);
+
+  // Reload the task list whenever a Health Connect sync completes.
+  // sync() (in healthConnectActions.ts) emits 'healthConnectSyncComplete' after
+  // persisting auto-completions. Without this listener, the task list would only
+  // reflect HC-driven completions after the user navigates away and back.
+  // The subscription is set up once on mount and torn down on unmount.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('healthConnectSyncComplete', loadTasks);
+    return () => sub.remove();
   }, []);
 
   // Re-check the midnight gate whenever the app returns to the foreground.

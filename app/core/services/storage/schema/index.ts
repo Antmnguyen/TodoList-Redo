@@ -32,6 +32,9 @@ import { initializeAppSettingsSchema } from './appSettings';
 // are swept from the live tasks table by archiveCompletedTasks() (midnight job #3).
 // No dependencies on other tables — safe to run last.
 import { initializeArchiveSchema } from './archive';
+// Health Connect integration — threshold→template mappings and meta settings.
+// No dependencies on other tables — safe to run last.
+import { initializeHealthConnectSchema } from './healthConnect';
 
 /**
  * Initializes all active database schemas in dependency order.
@@ -65,6 +68,11 @@ export function initializeAllSchemas(): void {
     // the live tasks table by archiveCompletedTasks() (midnight job #3).
     // No dependencies on any other table — safe to run last.
     initializeArchiveSchema();
+
+    // Step 7: Health Connect integration tables.
+    // health_connect_mappings + health_connect_meta.
+    // No dependencies on any other table — safe to run last.
+    initializeHealthConnectSchema();
 
     console.log('✅ All active schemas initialized');
   } catch (error) {

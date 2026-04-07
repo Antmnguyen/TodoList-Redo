@@ -138,7 +138,11 @@ const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) =>
   const barHeight = (() => {
     if (!hasActivity) return BAR_MIN_HEIGHT;
     if (mode === 'percent' && hasTotal) {
-      return Math.max((item.count / item.total!) * BAR_MAX_HEIGHT, BAR_MIN_HEIGHT);
+      // Cap at BAR_MAX_HEIGHT — % never exceeds 100 visually even if count > total
+      return Math.min(
+        Math.max((item.count / item.total!) * BAR_MAX_HEIGHT, BAR_MIN_HEIGHT),
+        BAR_MAX_HEIGHT,
+      );
     }
     return Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, BAR_MIN_HEIGHT);
   })();
@@ -147,7 +151,7 @@ const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) =>
   const displayValue = mode === 'count'
     ? String(item.count)
     : hasTotal
-      ? `${safePct(item.count, item.total!)}%`
+      ? `${Math.min(safePct(item.count, item.total!), 100)}%`
       : `${safePct(item.count, maxCount)}%`;
 
   // ── Segment heights (stacked bar) ──────────────────────────────────────
@@ -177,14 +181,16 @@ const BarColumn: React.FC<BarColumnProps> = ({ item, maxCount, color, mode }) =>
               {
                 height:          barHeight,
                 width:           BAR_WIDTH,
-                backgroundColor: hasActivity ? color : theme.separator,
+                backgroundColor: hasActivity
+                  ? (item.barColor ?? color)
+                  : theme.separator,
               },
             ]}
           />
         )}
       </View>
       <Text style={colStyles.dayLabel}>{item.day}</Text>
-      <Text style={[colStyles.valueLabel, hasActivity && { color }]}>
+      <Text style={[colStyles.valueLabel, hasActivity && { color: item.barColor ?? color }]}>
         {displayValue}
       </Text>
     </View>

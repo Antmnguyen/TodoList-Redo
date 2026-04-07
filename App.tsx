@@ -24,11 +24,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MainNavigator } from './app/navigation/MainNavigator';
 import { initializeAllSchemas } from './app/core/services/storage/schema';
 import { ThemeProvider } from './app/theme/ThemeContext';
+import { sync } from './app/features/googleFit/utils/healthConnectActions';
 
 // Initialize database tables before the app renders.
 // Must run before ThemeProvider mounts so app_settings (used to read the
 // persisted dark-mode preference) is available synchronously.
 initializeAllSchemas();
+
+// Fire-and-forget Health Connect sync immediately after DB init.
+// This ensures step/sleep history and task auto-completions are up to date
+// the moment the first screen renders, without blocking the app launch.
+// The sync() function checks HC availability internally — it exits cleanly
+// if Health Connect is not installed or permissions are not granted.
+sync().catch(e => console.warn('[HC] App-start sync failed:', e));
 
 export default function App() {
   // ThemeProvider reads the persisted dark-mode preference from app_settings

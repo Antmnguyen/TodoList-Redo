@@ -13,8 +13,8 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { AppState, View, StyleSheet } from 'react-native';
 
 // Navigation Components
 import { TabBar, Tab } from '../components/navigation/TabBar';
@@ -44,6 +44,7 @@ import { FloatingCreateTaskButton } from '../components/tasks/FloatingCreateTask
 
 // Actions
 import { createTask } from '../core/domain/taskActions';
+import { sync } from '../features/googleFit/utils/healthConnectActions';
 import { Task } from '../core/types/task';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -107,6 +108,23 @@ export const MainNavigator: React.FC = () => {
    * Null whenever overlayScreen !== 'EditPermanentTask'.
    */
   const [editingTemplate, setEditingTemplate] = useState<Task | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Foreground sync (S14)
+  // ---------------------------------------------------------------------------
+  // When the app transitions from background/inactive back to 'active', call
+  // sync() as a catch-up in case the background fetch didn't fire (common on
+  // battery-saver devices or during development). This is the same fire-and-
+  // forget pattern used at app start: never awaited, never blocks the UI.
+  // The subscription is torn down on navigator unmount (app close).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        sync().catch(e => console.warn('[HC] Foreground sync failed:', e));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // FAB Handlers
