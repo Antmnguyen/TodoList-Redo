@@ -35,19 +35,6 @@ Seamlessly bridge the gap between physical health and productivity by mapping bi
 * **Biometric Syncing:** Reads Steps, Sleep, and Workouts directly from Android's Health Connect API.
 * **Threshold Mappings:** Automatically complete tasks (e.g., "Walk 10k steps") when Health Connect data hits a user-defined threshold.
 * **Health connect Data** Easily view your past step sleep and workout data in the health connect section in browse.
-
-**Architecture Overview:**
-
-Physical Device (Health Connect) ──► healthConnectActions.ts (Sync Engine)
-                                          │
-                ┌─────────────────────────┴─────────────────────────┐
-                ▼                                                   ▼
-      healthConnectStorage.ts                             healthConnectUtils.ts
-      (SQLite history & goals)                            (Stats & Streaks logic)
-                │                                                   │
-                └─────────────────────────┬─────────────────────────┘
-                                          ▼
-                               UI Screens & Task Layer
 ---
 
 ## Technical Stack
