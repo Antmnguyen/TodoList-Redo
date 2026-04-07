@@ -37,7 +37,7 @@ Seamlessly bridge the gap between physical health and productivity by mapping bi
 * **Health connect Data** Easily view your past step sleep and workout data in the health connect section in browse.
 
 **Architecture Overview:**
-```text
+
 Physical Device (Health Connect) ──► healthConnectActions.ts (Sync Engine)
                                           │
                 ┌─────────────────────────┴─────────────────────────┐
@@ -78,7 +78,7 @@ Physical Device (Health Connect) ──► healthConnectActions.ts (Sync Engine)
 * `app/theme/` — Theme providers and Dark Mode styling.
 
 ---
-*Snapshot generated 2026-03-01 · Sprint 5 Deployment*
+
 
 
 
