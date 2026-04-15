@@ -28,18 +28,14 @@ The system centers on **Permanent Tasks**—reusable templates that eliminate th
 * **Data Migration:** Completed tasks are periodically moved from the active table into a dedicated archive. This keeps the primary list uncluttered and ensures the app remains responsive over long-term use.
 
 ### 2. Productivity Tracking & Stats
-| Screenshot 1 | Screenshot 2 |
-| :---: | :---: |
-| <img src="preview/1000003959.jpg" width="100"> | <img src="preview/1000003960.jpg" width="100"> |
+<img src="preview/1000003959.jpg" width="100"> <img src="preview/1000003960.jpg" width="100">
 The app uses a relational SQLite database to turn task history into visual metrics.
 * **Immutable Completion Logs:** Every time a task is completed or failed, it is recorded in a permanent log. This serves as the source of truth for all historical data.
 * **Data Visualization:** The app pulls from the log to generate calendar heatmaps and bar charts, showing exactly when tasks were finished and where gaps in consistency occur.
 * **Visual Identification:** Task cards use a dual-strip indicator system—color-coded by category and recurrence frequency—so you can distinguish between different types of work at a glance.
 
 ### 3. Health Connect Integration (v1.1.0)
-| Screenshot 3 | Screenshot 4 |
-| :---: | :---: |
-| <img src="preview/1000003964.jpg" width="100"> | <img src="preview/1000003965.jpg" width="100"> |
+<img src="preview/1000003964.jpg" width="100">  <img src="preview/1000003965.jpg" width="100"> 
 Seamlessly bridge the gap between physical health and productivity by mapping biometric data to automated task completion.
 * **Biometric Syncing:** Reads Steps, Sleep, and Workouts directly from Android's Health Connect API.
 * **Threshold Mappings:** Automatically complete tasks (e.g., "Walk 10k steps") when Health Connect data hits a user-defined threshold.
