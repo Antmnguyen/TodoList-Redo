@@ -1,6 +1,6 @@
 # ProductivityTracker
 
-<img src="preview/1000003958.jpg" width="600">
+<img src="preview/1000003958.jpg" width="100">
 
 ProductivityTracker is a local-first task management application built with **React Native (Expo)** and **SQLite**. It is designed to manage recurring workflows through reusable task templates and provide visual feedback on completion trends.
 
