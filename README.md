@@ -62,7 +62,7 @@ Seamlessly bridge the gap between physical health and productivity by mapping bi
 | **Productivity Visualization** | Completed |
 | **Health Connect Integration** | Completed (v1.1.0) |
 | **Location Geofencing** | In Progress |
-| **Google Calendar Sync** | Planned |
+| **Google Calendar Sync** | In Progress |
 
 ---
 
